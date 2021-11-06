@@ -1,0 +1,477 @@
+---
+title: "Module 3 Assignment on Classification"
+author: "Jiayue Meng // Undergraduate Student"
+date: "03/03/2021"
+#output: pdf_document
+output:
+  pdf_document: default
+  df_print: paged
+  #html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=80))
+```
+
+***
+
+\newpage{}
+
+
+***
+## Module Assignment Questions
+## Q1) (*Bayes Classifier*) 
+
+`Bayes classifier` classifies an observation $x_0$ to the class $k$ for which $p_k(x_0)$ is largest, where $\pi_k$ is prior (proportion of $k$ class in all classes over $j$):
+
+$$
+p_k(x_0) = P(y=k | X=x_0) = \frac {\pi_k \cdot f_k(x_0)} {\sum { \pi_j \cdot f_j(x_0)}}.
+$$
+
+Assume univariate (p=1) observation $x$ in class $k$ is iid from $N(\mu_k, \sigma_k^2)$, $f_k(x)$ is the density function of $x$ with parameters $\mu_k,\sigma_k$.
+
+a. Show that the Bayes classifier in 2-class problem (so $k=0,1$) assigns the observation $x_0$ to the class $k$ for which the discriminant score $\delta$ is largest when $\sigma_0=\sigma_1$ :
+
+$$
+\delta_k(x_0) = x_0 \frac {\mu_k} {\sigma^2} - \frac {\mu_k^2} {2 \sigma^2} + \log(\pi_k)
+$$ 
+
+b. (Empirical Work) Verify `part a` with a simple empirical demonstration using normal densities in R with `dnorm()` or  generated normal variables from `rnorm()` with $\mu_0 = 10, \mu_1=15, \sigma_0=\sigma_1=2, \pi_0 = 0.3, \pi_1=.7, mu2 = 15, pi2 = 0.7$. Plot the class densities or histograms in color, show the intersection between two class distributions (where the classification boundary starts), check one random value from each class by calculating the discriminant score so to confirm the class it belongs. How would you describe the misclassified values or regions? Calculate the error rate. What is the Bayes error rate?
+
+c. Under `part a`, assume $\sigma_0 \neq \sigma_1$.  Derive the Bayes classifier. Show work.
+
+d. (BONUS) For p>1, derive the the Bayes classifier. Show work.
+
+
+***
+## Q2) (*Four Models as Classifiers*) 
+
+The `Boston` data from `MASS` has 506 rows and 14 columns with the target variable `crim`, which is per capita crime rate by town. You will fit classification models (`KNN`, `logistic regression`, `LDA`, and `QDA`) in order to predict whether a given suburb has a crime rate above or below .3 per capita crime rate by town. Upper .3 may be labeled as `not really safe town` to raise a family. Use `80%-20% split validation test` approach.    
+
+
+a. Fit the `KNN`, `logistic regression`, `LDA`, and `QDA` models separately using all the predictors. Report  `error rate` for each `train` and `test` data set. Use `error rate` = `1-accuracy`. Based on the test error rates, decide which model is best/better. Why?
+
+b. Using the test data set, obtain confusion matrices and report only `recall`, `precision`, `f1` and `accuracy` metrics in a table. Comment on the findings. Based on this table, decide which model is best/better. Explain why some models do better than others. Which metric would be most important in this context? Why? Is this decision different from that of `part a`? Explain.
+
+c. Obtain the ROC curve for `logistic regression` based on train data set (plot of FPR vs TPR with classification threshold change). Plot it. Calculate the area under the curve. Explain what the curve and area tell about the model. 
+
+d. How did you find the optimal $k$ in the `KNN` classifier? Did you use `grid search` or `CV`? If not, use it and revise the results in part a and b. Did the results improve?
+
+e. What are the assumptions in each model? Do your best to describe each. Do your best to check these based on the fit. When you see assumption violation, what would you do to validate the fit?
+
+
+
+***
+## Q3) (*Concepts*) 
+
+a. What would change if you perform `$k-$fold approach` instead of `validation set` approach for the model fits in Question 2? Just discuss conceptually.
+
+b. To improve the test error rates in `part a` Q2, what strategies can be applied: list the ideas as many as possible. Try one of them and report the improved test error rate.
+
+c. Explain with less technical terms an estimation method employed in `binary logistic regression`. `MLE` and `gradient descent` are two of them. 
+
+d. (BONUS) Demonstrate with technical terms and numerically how `MLE` as estimation method employed in `binary logistic regression` works. Explain.  
+
+
+***
+Review the R lab codes. Also, some useful codes to start are here:
+
+```{r eval=FALSE}
+#Some useful codes
+library(MASS)
+summary(Boston)
+rm(Boston)
+attach(Boston)
+str(Boston)
+dim(Boston)
+n = nrow(Boston)
+n
+hist(crim)
+summary(crim)
+crime_dummy = rep(0, length(crim))
+#Q3 is 1
+quantile(crim, .75)
+crime_dummy[crim>1] = 1
+Boston = data.frame(Boston, crime_dummy)
+View(Boston)
+#rate in crime_dummy is 0.2509881 (P)
+sum(crime_dummy)/length(crime_dummy)
+# choose randomly 80% 
+set.seed(99)
+train=sample(c(TRUE,FALSE), size=n, 
+             prob=c(.80, .20), rep=TRUE) #randomly select index whether train or not from row
+test=(!train)
+Boston.train = Boston[train,]
+dim(Boston.train)
+Boston.test = Boston[test,]
+dim(Boston.test)
+crime_dummy.train = crime_dummy[train]
+sum(crime_dummy.train)/length(crime_dummy.train)
+crime_dummy.test = crime_dummy[test]
+sum(crime_dummy.test)/length(crime_dummy.test)
+# (this is another option to split the data into train and test)
+n_train = ceiling(.80 * n)
+n_train
+```
+
+\newpage
+
+***
+
+
+## Your Solutions
+
+Q1) 
+
+Part a:
+
+The procedure is in the attached pdf Q1 PART A. The expression is:
+$$
+x_0 \frac {\mu_k} {\sigma^2} - \frac {\mu_k^2} {2 \sigma^2} + \log(\pi_k)
+$$
+
+***
+Part b:
+```{r}
+set.seed(99)
+mean0 = 10
+mean1 = 15
+pi0 = 0.3
+pi1 = 0.7
+sd0= 2
+sd1=2
+x1 = rnorm(100*pi0, mean = mean0, sd = sd0)
+x2 = rnorm(100*pi1, mean = mean1, sd = sd1)
+plot(hist(x1,plot=FALSE), col = '#90ee90' ,xlim = c(0,20),ylim = c(-1,25))
+plot(hist(x2,plot=FALSE), col = rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink") , add = T)
+abline(v=15,col="red")
+
+set.seed(99)
+p0_1 = sample(x1,1) * (mean0/sd0^2) - (mean0^2/(2*sd0^2)) + log(pi0)
+cat('\np0_1 is:', p0_1)
+p1_1 = sample(x1,1) * (mean1/sd1^2) - (mean1^2/(2*sd1^2)) + log(pi1)
+cat('\np0_1 is:', p1_1)
+p0_1/p1_1
+cat('\np0_1/p1_1 is:', p0_1/p1_1)
+cat("\nSince p0_1/p1_1>0, x1 belongs to class k = 0.")
+p0_2 = sample(x2,1) * (mean0/sd0^2) - (mean0^2/(2*sd0^2)) + log(pi0)
+cat('\np0_2 is:', p0_2)
+p1_2 = sample(x2,1) * (mean1/sd1^2) - (mean1^2/(2*sd1^2)) + log(pi1)
+cat('\np1_2 is:', p1_2)
+p0_2/p1_2
+cat('\np0_2/p1_2 is:', p0_2/p1_2)
+cat("\nSince p0_2/p1_2<0, x2 belongs to class k = 1.\n")
+cat("As shown in the graoh, the intersection between two class distributinos is about from x=10 to x=14. \nThe misclassified values might be at the intersection region of the two classes \nbecause they have closed p values from each class.\n")
+
+P0fun <- function(x){
+  p0_fun = pi0*( (1/(sqrt(2*pi)*sd0))*exp(-(1/(2*sd0^2))*(x-mean0)^2) ) / ((pi0*( (1/(sqrt(2*pi)*sd0))*exp(-(1/(2*sd0^2))*(x-mean0)^2) ))+(pi1*( (1/(sqrt(2*pi)*sd1))*exp(-(1/(2*sd1^2))*(x-mean1)^2) )))
+  return(p0_fun)
+}
+P1fun <- function(x){
+  p1_fun = pi1*( (1/(sqrt(2*pi)*sd1))*exp(-(1/(2*sd1^2))*(x-mean1)^2) ) / ((pi0*( (1/(sqrt(2*pi)*sd0))*exp(-(1/(2*sd0^2))*(x-mean0)^2) ))+(pi1*( (1/(sqrt(2*pi)*sd1))*exp(-(1/(2*sd1^2))*(x-mean1)^2) )))
+  return(p1_fun)
+}
+X <- c(x1,x2)
+Pr = vector(length = 100)
+for (i in (1:100)) {
+  Pr[i] = max(P0fun(X[i]),P1fun(X[i]))
+}
+bayes_error = 1-mean(Pr)
+cat("\nThe Bayes Error Rate is",bayes_error)
+```
+
+***
+Part c:
+
+The terms that were ignored in part a will no longer be ignored in part c because the variances are not equal. The expression for Bayes classifier assuming that $\sigma_0 \neq \sigma_1$is:
+$$
+log(\pi_k)+log(\frac{1}{\sqrt{2\pi}\sigma_k})-\frac{x_0^2}{2\sigma_k^2}+x_0\frac{\mu_k}{\sigma_k^2}-\frac{\mu_k^2}{2\sigma_k^2}
+$$
+
+***
+Part d (BONUS):
+
+The procedure is in the attached pdf 1c. The expression is:
+$$
+log(\pi_k)+x^T\Sigma^{-1}\mu_k-\frac{1}{2}\mu_k^T\Sigma^{-1}\mu_k
+$$
+
+***
+
+
+
+\newpage
+
+Q2) 
+
+Part a:
+```{r}
+library(MASS)
+library(class)
+attach(Boston)
+n = nrow(Boston)
+dim(Boston)
+crime_dummy = rep(0, length(crim))
+crime_dummy[crim>0.3] = 1
+set.seed(99)
+train=sample(c(TRUE,FALSE), size=n, prob=c(.80, .20), rep=TRUE)
+test=(!train)
+Boston.train = Boston[train,]
+Boston.test = Boston[test,]
+crime_dummy.train = crime_dummy[train]
+crime_dummy.test = crime_dummy[test]
+
+perfcheck <- function(ct) {
+  Accuracy <- (ct[1]+ct[4])/sum(ct)
+  Recall <- ct[4]/sum((ct[2]+ct[4]))      #TP/P   or Power, Sensitivity, TPR 
+  Type1 <- ct[3]/sum((ct[1]+ct[3]))       #FP/N   or 1 - Specificity , FPR
+  Precision <- ct[4]/sum((ct[3]+ct[4]))   #TP/P*
+  Type2 <- ct[2]/sum((ct[2]+ct[4]))       #FN/P
+  F1 <- 2/(1/Recall+1/Precision)
+  Values <- as.vector(round(c(Accuracy, Recall, Type1, Precision, Type2, F1),4)) *100
+  Metrics = c("Accuracy", "Recall", "Type1", "Precision", "Type2", "F1")
+  cbind(Metrics, Values)
+  #list(Performance=round(Performance, 4))
+}
+
+#KNN
+train.X = cbind(zn, indus, chas, nox, rm, age, dis, rad, tax, ptratio, black, lstat,
+    medv)[train, ]
+test.X = cbind(zn, indus, chas, nox, rm, age, dis, rad, tax, ptratio, black, lstat,
+    medv)[test, ]
+dim(train.X)
+dim(test.X)
+set.seed(1)
+#train group
+knn.pred.train = knn(test.X, train.X, crime_dummy.test, k = 1)
+table(crime_dummy.train, knn.pred.train)
+ct1 = table(crime_dummy.train, knn.pred.train)
+perfcheck(ct1)
+cat("\nThe train error rate for KNN is ", (1 - (ct1[1] + ct1[4])/409) * 100, "%.")
+# test group
+knn.pred.test = knn(train.X, test.X, crime_dummy.train, k = 1)
+table(crime_dummy.test, knn.pred.test)
+ct2 = table(crime_dummy.test, knn.pred.test)
+perfcheck(ct2)
+cat("\nThe test error rate for KNN is ", (1 - (ct2[1] + ct2[4])/97) * 100, "%.")
+
+#logistic regression
+#train group
+attach(Boston)
+glm.fits.train=glm(crime_dummy.train~zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+black+lstat+medv,data=Boston.train,family=binomial)
+glm.probs.train=predict(glm.fits.train, Boston.train, type="response")
+length(glm.probs.train)
+glm.pred.train=rep("<0.3",409)
+glm.pred.train[glm.probs.train>.5]=">0.3"
+table(crime_dummy.train, glm.pred.train)
+ct3<-table(crime_dummy.train, glm.pred.train)
+perfcheck(ct3)
+cat("The train error rate for logistic regression is",(1 - (ct3[1] + ct3[4])/409) *
+100, "%.")
+#test group
+glm.fits.test=glm(crime_dummy.test~zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+black+lstat+medv,data=Boston.test,family=binomial)
+glm.probs.test=predict(glm.fits.train, Boston.test, type="response")
+length(glm.probs.test)
+glm.pred.test=rep("<0.3",97)
+glm.pred.test[glm.probs.test>.5]=">0.3"
+table(crime_dummy.test, glm.pred.test)
+ct4<-table(crime_dummy.test, glm.pred.test)
+perfcheck(ct4)
+cat("The test error rate for logistic regression is",(1 - (ct4[1] + ct4[4])/97) *
+100, "%.")
+
+#LDA
+#train group
+lda.fit.train=lda(crime_dummy.train~zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+black+lstat+medv,data=Boston.train)
+lda.pred.train=predict(lda.fit.train, Boston.train)
+lda.train.class=lda.pred.train$class
+table(crime_dummy.train,lda.train.class)
+ct5<-table(crime_dummy.train,lda.train.class)
+perfcheck(ct5)
+cat("The train error rate for LDA is",(1 - (ct5[1] + ct5[4])/409) * 100, "%.")
+#test group
+lda.pred.test = predict(lda.fit.train, Boston.test)
+lda.test.class = lda.pred.test$class
+table(crime_dummy.test, lda.test.class)
+ct6 = table(crime_dummy.test, lda.test.class)
+perfcheck(ct6)
+cat("\nThe test error rate for LDA is ", (1 - (ct6[1] + ct6[4])/97) * 100, "%.")
+
+#QDA
+#train group
+qda.fit.train=qda(crime_dummy.train~zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+black+lstat+medv,data=Boston.train)
+qda.train.class=predict(qda.fit.train,Boston.train)$class
+table(crime_dummy.train, qda.train.class)
+ct7<-table(crime_dummy.train, qda.train.class)
+perfcheck(ct7)
+cat("The train error rate for QDA is 1-precision=",(1 - (ct7[1] + ct7[4])/409) * 100, "%.")
+#test group
+qda.test.class=predict(qda.fit.train, Boston.test)$class
+table(crime_dummy.test, qda.test.class)
+ct8<-table(crime_dummy.test, qda.test.class)
+perfcheck(ct8)
+cat("The test error rate for QDA is 1-precision=",(1 - (ct8[1] + ct8[4])/97) * 100, "%.")
+```
+Form models above, we find that KNN model is the best because it has the smallest test error rates.
+
+***
+Part b:
+
+All the four metrics show that KNN model is the best. F1 metric is the most important because it combines the other two metrics together and evaluate models more comprehensively. This result is exactly the same with that in part a. In the table we can see that the misplaced values in KNN is the least, which means that the FP and TN values are least among the four models. Therefore, all the four metrics show that KNN is the best.
+
+***
+Part c:
+```{r}
+library(ROCR)
+glm.prob.train<-predict(glm.fits.train,Boston.train,type="response")
+plot(performance(ROCR::prediction(glm.prob.train, crime_dummy.train),"tpr","fpr"),col="Orange")
+abline(0,1)
+
+library(zoo)
+x <- unlist(performance(ROCR::prediction(glm.prob.train, crime_dummy.train),"tpr","fpr")@x.values)
+y <- unlist(performance(ROCR::prediction(glm.prob.train, crime_dummy.train),"tpr","fpr")@y.values)
+id <- order(x)
+sum(diff(x[id])*rollmean(y[id],2)) - 0.5
+
+```
+
+The area under curve is 0.4768133. The curve tells about the true positive rate and false positive rate for the corresponding value. The area tells about the classifier's usefulness.
+
+
+
+***
+Part d:
+```{r}
+library(caret)
+Boston.cv = Boston
+Boston.cv$crim = crime_dummy
+set.seed(99)
+KNN.fit <- train(crim~zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+black+lstat+medv, data = Boston.cv, method = "knn", trControl = trainControl(method="repeatedcv",repeats = 3), preProcess = c("center","scale"),tuneLength = 20)
+KNN.fit
+```
+
+
+From the result above, we can see that the smaller the k is, the better the k is in the KNN classifier. It is because RMSE changes toward the same direction as the k does. So, we can know that the smallest k is the best, which is k=1. Since I used k=1 in (a) and (b), I don't need to revise the results and the results did not improve. 
+
+
+***
+Part e:
+
+
+KNN: No assumptions for KNN.
+
+
+QDA: Normality.
+
+
+
+Logistic Regression:
+
+
+1. Binary response variable. (Meet: crime_dummy only has 1 and 0.)
+
+2. Lack of strongly influential outliers. (Meet: It only has 1 and 0.)
+
+3. Absence of multicollinearity. (Meet)
+
+4. Linearity in the logit for continuous variables. (Not Meet. To validate the fit we should do some transformation.)
+
+5. Observations are independent. (Meet: The residual plot has no clear pattern.)
+
+6. The sample size is large enough. (Meet: There are 506 observations.)
+
+
+
+LDA:
+
+
+1. The data is Gaussian.
+
+
+2. That each attribute has the same variance. (Meet)
+
+
+3. Observations are independent. (Meet: The residual plot has no clear pattern.)
+
+
+4. Normality. (Meet)
+
+
+
+***
+
+
+\newpage
+
+
+Q3) 
+
+Part a:
+
+If I perform $k-$fold approach instead of validation set approach for the model fits in Question 2, the error rates will decrease and the result may be better because $k-$fold approach calculates the error rates several times.
+
+***
+Part b:
+Strategies can be applied: k-fold approach and svm. The following method is svm.
+```{r}
+library(e1071)
+f<- svm(crime_dummy~zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+black+lstat+medv, data = Boston, type = "nu-regression",trControl = +trainControl(method = "repeatedcv"))
+
+prob=predict(f,Boston.test,type="response")
+pred=rep("<0.3",97)
+pred[svm.prob.test>.5]=">0.3"
+ct1 = table(crime_dummy.test,pred)
+ct1
+error= 1-(ct1[1]+ct1[4])/sum(ct1) 
+error
+```
+The test error rate is 0.06185567, and it is not improved from part a Q2.
+
+
+***
+Part c:
+
+In binary logistic regression, estimation methods are utilized to obtain the estimations of parameters. 
+
+
+MLE: 
+MLE maximizes likelihood. The goal of maximum likelihood is to find the parameter values that give the distribution that maximize the probability of observing the data.
+
+
+Gradient descent: 
+It is an optimization algorithm for finding a local minimum of a differentiable function by iteratively adjusting the values in the direction of steepest descent. 
+
+
+***
+Part d (BONUS):
+
+
+We try to find estimates $\hat{\beta}_0$ (estimate of $\beta_0$) and $\hat{\beta}_1$ (estimate of $\beta_1$) to maximize the likelihood function $$\ell(\beta_0,\beta_1) = \prod_{i:y_i=1} p(x_i) \prod_{i':y_{i'}=0} (1-p(x_{i'}))$$. 
+
+***
+
+
+
+\newpage
+
+### Write comments, questions: It's always a nightmare to do 265 homework. Can we have regular TA office hour to help with homework? We are unable to find any support when doing the homework. Nobody replies email about homework questions and office hour appointments. 
+
+
+***
+I hereby write and submit my solutions without violating the academic honesty and integrity. If not, I accept the consequences. 
+
+### List the friends you worked with (name, last name): 
+Xubin Lou(partner), Rong Fan
+
+### Disclose the resources or persons if you get any help: 
+Module3_Lab_Rcodes.Rmd
+
+### How long did the assignment solutions take?: 
+About 20 hours
+
+
+***
+## References
+https://towardsdatascience.com/probability-concepts-explained-maximum-likelihood-estimation-c7b4342fdbb1
+https://builtin.com/data-science/gradient-descent
+...

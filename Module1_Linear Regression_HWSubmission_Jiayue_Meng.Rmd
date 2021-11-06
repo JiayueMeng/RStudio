@@ -1,0 +1,549 @@
+---
+title: "Module 1 Assignment on Linear Regression"
+author: "Jiayue Meng // Undergraduate Student"
+date: "02/16/2021"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=80)  )
+```
+
+***
+
+\newpage{}
+
+
+## Module Assignment Questions
+
+## 1) (*Concepts*) 
+
+Perform the following commands in R after you read the docs by running `help(runif)` and `help(rnorm)`:
+
+```{r echo=TRUE}
+set.seed(99)
+n=100
+x1=runif(n) # predictor 1
+x2=rnorm(n) # predictor 2
+x3=x1+x2+rnorm(n)+5 # predictor 3
+y1=2 + 4* x2 + rnorm(n) # Model 1
+y2=2 + 3*x1 + 4* x2 + 5*x3 + rnorm(n) # Model 2
+summary(lm(y1~x2)) #Fitted Model 1
+summary(lm(y2~x1+x2+x3)) #Fitted Model 2
+```
+
+The last lines correspond to creating two linear models (call Model 1 and Model 2, respectively) and their fitted results in which y1 and y2 are functions of some of the predictors x1, x2 and x3. 
+
+a. Fit a least squares (LS) regression for Model 1. Plot the response and the predictor. Use the abline() function to display the fitted line. What are the regression coefficient estimates? Report with standard errors and p-values in a table.
+b. Is the fitted Model 1 good? Do quality of model check. Justify with appropriate metrics we covered.
+c. Now fit a LS regression for Model 2. What are the regression coefficient estimates? Report them along with the standard errors and p-values. Are the predictors significantly contributing to the model? Explain.
+d. What is the correlation between x2 and x3? Create a scatterplot displaying the relationship between the variables. Comment on the strength of the correlation.
+e. What are the assumptions in fitted Model 2? List the four assumptions. Check each. Comment on each.
+f. Do you think adding the new predictors, x1 and x3, to Model 1 improved Model 1? Test it using ANOVA F method. Comment on the results.
+g. Now suppose we corrupt one of the observations in y2: corrupt the first observation by adding 100 and then multiplying by 100 ($x1_1^*=100+100*x1_1$). Re-fit Model 2 using this new data. Address each question: What changed? What effect does this new observation have on the model? Is this observation an outlier on the fitted model? Is this observation a high-leverage point? Explain your answers showing fully knowledge and computations.
+
+
+***
+
+## 2) (*Application*) 
+
+This question involves the use of multiple linear regression on the `Auto` data set on 9 variables and 392 vehicles with a dependent (target) variable `mpg`.
+
+Variable names:
+
+- `mpg`: miles per gallon
+- `cylinders`: Number of cylinders between 4 and 8
+- `displacement`: Engine displacement (cu. inches)
+- `horsepower`: Engine horsepower
+- `weight`: Vehicle weight (lbs.)
+- `acceleration`: Time to accelerate from 0 to 60 mph (sec.)
+- `year`: Model year (modulo 100)
+- `origin`: Origin of car (1. American, 2. European, 3. Japanese)
+- `name`: Vehicle name
+
+A simple linear regression (SLR) model can be fitted with the code:
+```{r, echo=TRUE, eval=TRUE}
+library(ISLR)
+attach(Auto) #this enables to use the column names
+#summary(Auto) #always do EDA and graphs first
+#simple linear model fit. This is 'regress y=mpg onto x=horsepower'
+lm.fit = lm(mpg ~ horsepower)
+#summary(lm.fit)
+```
+
+Before doing a model fit, do exploratory data analysis (EDA) by getting numerical or graph summaries. For example, the sample mean and sd of mpg is `r round(mean(mpg, na.rm=T),2)` and `r round(sd(mpg, na.rm=T),2)`. Determine types of data: If predictors are numerical, lm() will work directly; if categorical, you need to make dummy or factor() will do it.
+
+In the SLR fitted model, the $R^2$ of the fit is `r round(summary(lm.fit)$r.sq,4)`, meaning `r round(summary(lm.fit)$r.sq,4) * 100.0`% of the variance in mpg is explained by horsepower in the linear model. 
+
+In this part, you will fit multiple linear regression (MLR) models using the lm() with mpg as the response and all the other features as the predictor. Use the summary() function to print the results. Use the plot() function to produce diagnostic plots of the least squares regression fit. Include and comment on the output.
+
+- Call the sample mean of mpg, `Model Baseline`.
+
+- Perform a SLR with mpg as the response and horsepower as the predictor. Call this model, `Model 1`.
+
+- Perform a MLR with mpg as the response and horsepower and year as the predictors. Call this model, `Model 2`.
+
+- Perform a MLR with mpg as the response and all other variables except the categorical variables as the predictors. Call this model, `Model 3`.
+
+- Perform a MLR with mpg as the response and all variables including the categorical variables as the predictors. Call this model, `Model Full`.
+
+```{r}
+name <- as.numeric(factor(name))
+ModelBaseline <- mean(mpg)
+Model1 <- lm(mpg~horsepower)
+Model2 <- lm(mpg~horsepower+year)
+Model3 <- lm(mpg~.-origin-year-name,data=Auto)
+ModelFull <- lm(mpg~cylinders+displacement+horsepower+weight+acceleration+year+origin+name)
+```
+
+a. Produce a scatterplot matrix which includes all of the variables in the data set.
+b. Compute the matrix of correlations between the variables using the function cor(). You will need to exclude the qualitative variables.
+c. What does the coefficient for the mpg variable suggest in Model 1? Does it change in other models?
+d. Make a table and report $SSTO$, $MSE$, $R^2$, $R^2_{adj}$, $BIC$, $F$-ts and $F$-pvalue for each model, if applicable.
+e. Comment briefly on the quality of the fit for each model. Do this in the table you created in part d.
+f. Which predictors appear `most important` in the `Model Full` fit in terms of relationship to the response? How do you justify?
+g. Predict the mpg at `c(horsepower, year)=c(200, 80)`. Report the 95% confidence interval for the prediction.
+h. Do the fit diagnostics for the Model 2 fit by doing:
+- Check some assumptions. Include necessary plots. Avoid including uncommented outputs. Comment on any problems you see with the fit.
+- Do the residual plots suggest any unusually large outliers? 
+- Does the leverage plot identify any observations with unusually high leverage?
+- Do any interactions between horsepower and year appear to be statistically significant?
+- Try a transformation of the mpg variable, such as log(X), in order to improve the $R^2_{adj}$. Comment on your findings.
+
+
+## 3) (*Theory*) 
+
+In SLR, model errors are defined as $$ {e}_{i} = y_i - {y}_i = y_i - (\beta_0 + \beta_1 x_i).$$ The ordinary LS estimation argument with cost function notation can be expressed as $$ \hat{\beta}_{LS}: argmin{J(\beta)} =  argmin{\frac{1}{n}\sum_{1}^{n}{e}_i^2}.$$
+
+a. Obtain the estimating equation for the model parameter $\beta_1$ (using differentiation). If you prefer matrix notation way to obtain the equation in a LR model, this would be great. Then, express the $\hat \beta_1$.
+
+b. In SLR,  is there any difference between $var(\hat\mu_{y_i|x_i})$ and $var(\hat{y}_{x_0})$, where $\hat\mu_{y_i|x_i}$ is estimation at $x_i$ and  $\hat{y}_{x_0}$ is prediction at a future value $x_0$? Explain.
+
+c. `Leverage statistic` of observation $x_i$ on $\hat y$ in a LS regression model is $h_i = H_{ii}$, which describes the degree by which the $i-$th measured value influences the $i$th fitted value. In the slides, we reviewed: $$X \cdot \hat{\beta}=X \cdot (X^t \cdot X)^{-1} \cdot X^t \cdot  y = H \cdot y = \hat y$$ Also, some mathematical properties are expressed as these two arguments: $1/n \leq  h_i \leq 1$, $\bar h = (p+1)/n$. Verify these two formulas numerically using the Model 2 fit in Q2, Auto  dataset. Report the calculations. Comment on the calculations whether or not these are verified.
+
+
+d. (BONUS) $R^2$ in SLR has two expressions:
+$$
+R^2 = \frac{\left[ \sum (x_i - \bar{x}) (y_i - \bar{y}) \right]^2}
+           {\sum (x_j - \bar{x})^2 \sum (y_k - \bar{y})^2}
+$$
+and $$ R^2 = \frac{\sum (y_i - \bar{y})^2 - \sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2} = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2}. $$
+Prove that these are equivalent.
+
+e. (BONUS) Ask a challenging question and answer (under the assignment context).
+
+\newpage
+
+***
+
+
+## Your Solutions
+
+Q1) 
+
+Part a:
+```{r}
+plot(x2,y1)
+abline(lm(y1~x2))
+coef(lm(y1~x2))
+
+table<-matrix(c(summary(lm(y1~x2))$coefficients[1,1],summary(lm(y1~x2))$coefficients[2,1],summary(lm(y1~x2))$coefficients[1,2],summary(lm(y1~x2))$coefficients[2,2],summary(lm(y1~x2))$coefficients[1,4],summary(lm(y1~x2))$coefficients[2,4]), 2, 3)
+colnames(table)=c("estimates","standard error","p-value")
+rownames(table)=c("(Intercept)","x2")
+table
+
+library(knitr)
+knitr::kable(table, caption = "Summary Statistics")
+```
+
+***
+Part b:
+```{r}
+summary(lm(y1~x2))
+summary(lm(y2~x1+x2+x3))
+AIC(lm(y1~x2))
+AIC(lm(y2~x1+x2+x3))
+BIC(lm(y1~x2))
+BIC(lm(y2~x1+x2+x3))
+```
+Model 1 is good. We can see from the AIC and BIC that Model 1 is better.
+
+***
+Part c:
+```{r}
+
+tablec<-matrix(c(summary(lm(y2~x1+x2+x3))$coefficients[1,1],summary(lm(y2~x1+x2+x3))$coefficients[2,1],summary(lm(y2~x1+x2+x3))$coefficients[3,1],summary(lm(y2~x1+x2+x3))$coefficients[4,1],summary(lm(y2~x1+x2+x3))$coefficients[1,2],summary(lm(y2~x1+x2+x3))$coefficients[2,2],summary(lm(y2~x1+x2+x3))$coefficients[3,2],summary(lm(y2~x1+x2+x3))$coefficients[4,2],summary(lm(y2~x1+x2+x3))$coefficients[1,4],summary(lm(y2~x1+x2+x3))$coefficients[2,4],summary(lm(y2~x1+x2+x3))$coefficients[3,4],summary(lm(y2~x1+x2+x3))$coefficients[4,4]), 4, 3)
+
+tablec
+
+colnames(tablec)=c("estimates","standard error",  "p-value")
+rownames(tablec)=c("(Intercept)","x1","x2","x3")
+
+
+knitr::kable(tablec, caption = "Summary Statistics")
+```
+
+All the predictors significantly contributing to the model because their p-values are less than 0.05.
+
+***
+Part d:
+```{r}
+cor(x2,x3)
+plot(x2,x3,main="Correlation between x2 and x3")
+```
+The correlation between x2 and x3 is 0.631347.
+
+
+From the correlation and the graph, we can see that x2 and x3 have fairly strong and positive correlation. 
+
+***
+Part e:
+
+
+1.Residuals are normally distributed.
+
+
+2.The variance of error terms are similar across the values of the independent variables.
+
+
+3.The independent variables are not highly correlated with each other.
+
+
+4.There is a linear relationship between the outcome variable and the independent variables.
+
+
+1.Residuals are normally distributed.
+```{r}
+qqnorm(resid(lm(y2~x1+x2+x3)))
+qqline(resid(lm(y2~x1+x2+x3)))
+```
+From the plot we can see that the residuals are approximately normally distributed since they follow the line.
+
+***
+
+2.The variance of error terms are similar across the values of the independent variables.
+```{r}
+library(MASS)
+plot(fitted(lm(y2~x1+x2+x3), stdres(lm(y2~x1+x2+x3))))
+plot(fitted(lm(y2~x1+x2+x3)), stdres(lm(y2~x1+x2+x3)))
+```
+From the plots we can see that the distributions of residuals and standardized residuals have no clear patterns, so we can say that they are random distributed. Thus, they have the same variances.
+
+***
+
+3.The independent variables are not highly correlated with each other.
+```{r}
+X <- model.matrix(lm(y2~x1+x2+x3))
+n <- nrow(X)
+p <- ncol(X)
+par(mfrow=c(2,3))
+for(i in 2:p){plot(X[,i],stdres(lm(y2~x1+x2+x3)), xlab=paste0("X",i),
+                   ylab="Standardized Residuals")
+abline(h=c(-2,2),col=i)}
+```
+From the three graphs we can see that there are no clear and similar patterns for the distributions in these three graphs. The distributions are random. So, we can say the independent variables are not highly correlated with each other.
+
+***
+
+4.There is a linear relationship between the outcome variable and the independent variables.
+```{r}
+plot(1:n, stdres(lm(y2~x1+x2+x3)))
+```
+We can see from the graph that standardized residuals have no patterns. Therefore, there is a linear relationship between the outcome variable and the independent variables.
+
+***
+Part f:
+```{r}
+anova(lm(y1~x2), lm(y1~x1+x2+x3))
+```
+Model 1 cannot be improved by adding new predictors x1 and x3 because the p-value > 0.05.
+
+***
+Part g:
+```{r}
+y2[1]=100+100*y2[1]
+summary(y2) 
+summary(lm(y2~x1+x2+x3))
+```
+
+
+R-squared and adjusted R-squared decreases, which causes that x1, x2 and x3 can only explain little variances in y2. The estimate of Intercept and x1 increases, and the estimate of x2 and x3 decreases. This observation is an outlier on the fitted model because it is much larger than Q3+1.5IQR. This observation a high-leverage point because the estimate for x1 is way larger than the estimates of x2 and x3.
+
+***
+part h:
+```{r}
+x1[1]=100+100*x1[1]
+summary(x1) 
+summary(lm(y2~x1+x2+x3))
+```
+The estimate and standard error of x1 decreases. The p-value for x1 increases while the other three changes a little. Since the R-squared is large, the model is affected by a little. This obesrvation is an outlier because it is much larger than Q3+1.5IQR. This observation a high-leverage point because the estimate for x1 is way larger than the estimates of others. The affects of corrupted data on model estimates are smaller than that in the part g.
+
+
+***
+
+\newpage
+
+Q2) 
+
+Part a:
+```{r}
+pairs(mpg~cylinders+displacement+horsepower+weight+acceleration+year+origin+name,pch=".")
+```
+
+***
+Part b:
+```{r}
+acor <- matrix(cor(as.matrix(Auto[1:6])),6,6)
+colnames(acor)=c("mpg","cylinders","displacement","horsepower","weight","acceleration")
+rownames(acor)=c("mpg","cylinders","displacement","horsepower","weight","acceleration")
+tablea=acor
+knitr::kable(tablea, caption = "Correlation coefficients")
+```
+
+***
+Part c:
+```{r}
+summary(Model1)
+summary(Model2)
+summary(Model3)
+summary(ModelFull)
+coef(Model1)
+coef(Model2)
+coef(Model3)
+coef(ModelFull)
+```
+
+
+In Model1, the coefficient for the horsepower variable suggests that the car can run 0.1578447 fewer miles per gallon when the horsepower of the engine increase for 1 unit. In Model2, the coefficient changes a little. However, for Model3 and ModelFull, the coefficient becomes much smaller when more independent variables are added.
+
+***
+Part d:
+```{r}
+X <- model.matrix(Model1)
+n <- nrow(X)
+y <- mpg
+yhat <- fitted(Model1)
+res <- resid(Model1)
+sum((y-yhat)^2)
+SSE1=sum(res^2) #SSE for model 1
+J <- matrix(rep(1,n*n),nrow=n)
+k = dim(X)[2]
+SSTO1 <- t(y)%*%y -(1/n)*t(y)%*%J%*%y #SSTO for model 1
+MSE1= SSE1/(n-k) #MSE for model 1
+R2_1=0.6059 #R-squared for model 1
+AR2_1=0.6049 #Adjusted R-squared for model 1
+BIC1=BIC(Model1) #BIC for model 1
+F_ts1=599.7 #F test statistic for model 1
+F_p1="< 2.2e-16" #F test p-value for model 1
+
+
+X <- model.matrix(Model2)
+n <- nrow(X)
+yhat <- fitted(Model2)
+res <- resid(Model2)
+SSE2=sum(res^2) #SSE for model 2
+J <- matrix(rep(1,n*n),nrow=n)
+k = dim(X)[2]
+SSTO2 <- t(y)%*%y -(1/n)*t(y)%*%J%*%y #SSTO for model 2
+MSE2= SSE2/(n-k) #MSE for model 2
+R2_2=0.6855 #R-squared for model 2
+AR2_2=0.6839 #Adjusted R-squared for model 2
+BIC2=BIC(Model2) #BIC for model 2
+F_ts2=423.9 #F test statistic for model 2
+F_p2="< 2.2e-16" #F test p-value for model 2
+
+
+X <- model.matrix(Model3)
+n <- nrow(X)
+yhat <- fitted(Model3)
+res <- resid(Model3)
+SSE3=sum(res^2) #SSE for model 3
+J <- matrix(rep(1,n*n),nrow=n)
+k = dim(X)[2]
+SSTO3 <- t(y)%*%y -(1/n)*t(y)%*%J%*%y #SSTO for model 3
+MSE3= SSE3/(n-k) #MSE for model 3
+R2_3=0.7077 #R-squared for model 3
+AR2_3=0.7039 #Adjusted R-squared for model 3
+BIC3=BIC(Model3) #BIC for model 3
+F_ts3=186.9 #F test statistic for model 3
+F_p3="< 2.2e-16" #F test p-value for model 3
+
+
+X <- model.matrix(ModelFull)
+n <- nrow(X)
+yhat <- fitted(ModelFull)
+res <- resid(ModelFull)
+SSE4=sum(res^2) #SSE for model 4
+J <- matrix(rep(1,n*n),nrow=n)
+k = dim(X)[2]
+SSTO4 <- t(y)%*%y -(1/n)*t(y)%*%J%*%y #SSTO for model 4
+MSE4= SSE4/(n-k) #MSE for model 4
+R2_4=0.8229 #R-squared for model 4
+AR2_4=0.8192 #Adjusted R-squared for model 4
+BIC4=BIC(ModelFull) #BIC for model 4
+F_ts4=222.5 #F test statistic for model 4
+F_p4="< 2.2e-16" #F test p-value for model 4
+SSTO=round(as.matrix(c(SSTO1,SSTO2,SSTO3,SSTO4)),4) #turn them into a table
+MSE=round(c(MSE1,MSE2,MSE3,MSE4),4)
+R2=round(c(R2_1,R2_2,R2_3,R2_4),4)
+AR2=round(c(AR2_1,AR2_2,AR2_3,AR2_4),4)
+BIC=round(c(BIC1,BIC2,BIC3,BIC4),4)
+F_ts=round(c(F_ts1,F_ts2,F_ts3,F_ts4),4)
+F_p=c(F_p1,F_p2,F_p3,F_p4)
+tablem=cbind(SSTO,MSE,R2,AR2,BIC,F_ts,F_p)
+colnames(tablem)=c("SSTO","MSE","R-squared","Adjusted R-squared","BIC","F test statistic","F test p-value")
+rownames(tablem)=c("Model 1","Model 2","Model 3","ModelFull")
+
+knitr::kable(tablem, caption = "Summary Statistics")
+```
+The baseline doesn't have these measurements.
+
+***
+Part e:
+
+ModelFull is the best in quality. Model 1 is the simplest. Model4 has better quality than Model3. When there are more variables added to the model, the R-squared becomes larger and p-values become smaller. So, more variances can be explained by the model.
+
+***
+Part f:
+```{r}
+library(lm.beta)
+lm.beta(lm(mpg~cylinders+displacement+horsepower+weight+acceleration+year+origin+name))
+```
+As we can see in the summary, the predictor weight has the largest standardized coefficient absolute value, which means that it has the largest mean change in the response given a one standard deviation change.
+
+***
+Part g:
+```{r}
+predict(Model2, data1 = data.frame(horsepower=200,year=80), interval="predict")
+```
+The 95% prediction interval is (4.745447, 22.2773).
+
+***
+Part h:
+```{r}
+par(mfrow=c(2,2))
+plot(Model2)
+
+y_hat <- fitted(Model2)
+plot(yhat, resid(Model2))
+plot(yhat, stdres(Model2))
+
+
+X <- model.matrix(Model2)
+n <- nrow(X)
+p <- ncol(X)
+par(mfrow=c(2,3))
+for(i in 2:p){plot(X[,i],stdres(Model2), xlab=paste0("X",i),
+                   ylab="Standardized Residuals")
+abline(h=c(-2,2),col=i)}
+plot(1:n, stdres(Model2))
+
+library(car)
+vif(Model2)
+Model2n <- lm(mpg~log(horsepower)+year)
+summary(Model2n)
+```
+From the Q-Q plot we can see that the residuals are approximately normally distributed. 
+We can see equal variances from the graphs of resid(Model2) and stdres(Model2). 
+We can also see a linear relationship between the outcome variable and the independent variables. 
+The residual plots suggest no unusually large outliers.
+The leverage plot identify no observations with unusually high leverage.
+No interactions between horsepower and year appear to be statistically significant.
+R-squared after the log transformation is larger than before. 
+
+
+***
+Part i:
+```{r}
+predict(Model2,newdata=data.frame(horsepower=200,year=80), interval="confidence")
+```
+The 95% confidence interval is (11.96143, 15.06132). The prediction interval in part g is is different from this one. The one in part g is wider. It is because prediction intervals measure the future values, but confidence intervals measure merely current values. 
+
+***
+
+
+\newpage
+
+
+Q3) 
+
+Part a:
+
+See attached picture for the work since I cannot type the procedure here.
+
+$\hat\beta_1=\frac{\Sigma(x_i*y_i)-\frac{\Sigma(x_i)*\Sigma(y_i)}{n}}{\Sigma(x_i^2)-\frac{(\Sigma x_i)^2}{n}}$
+
+***
+Part b:
+
+
+We assume that there are no error terms for the estimation at $x_1$ because it measures current values. In contrast, we don't assume that there are no error terms for the prediction at a future value $x_0$. Thus, the two values will be different. 
+
+
+***
+Part c:
+```{r}
+X <- model.matrix(Model2)
+n <- nrow(X)
+p <- ncol(X)
+1/n
+
+H <- X%*%solve(t(X)%*%X)%*%t(X)
+h <- diag(H)
+max(h);min(h)
+mean(h)
+(p+1)/n
+```
+The maximum of h is around 0.3. 
+
+
+The minimum is 0.0025519. 
+
+
+1/n = 0.00255102 is smaller than the minimum = 0.0025519. 
+
+
+The maximum < 1. Formula 1 is verified.
+
+
+h mean = 0.007653061. 
+
+
+(p+1)/n = 0.01020408. 
+
+
+Since h mean $\neq$ (p+1)/n, the second formula is not verified.
+
+***
+Part d (BONUS):
+
+
+
+***
+Part e (BONUS):
+
+
+***
+
+
+\newpage
+
+### Write comments, questions: ...
+
+
+***
+I hereby write and submit my solutions without violating the academic honesty and integrity. If not, I accept the consequences. 
+
+### List the fiends you worked with (name, last name): Rong Fan, Xubin Lou
+
+### Disclose the resources or persons if you get any help: ...
+
+### How long did the assignment solutions take?: ...
+
+
+***
+## References
+...

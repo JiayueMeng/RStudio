@@ -1,0 +1,361 @@
+---
+title: "Module 9 Assignment on Unsupervised Methods: PC and Clustering"
+author: "Jiayue Meng // Undergraduate"
+date: "Today's date"
+#output: pdf_document
+output:
+  pdf_document: default
+  df_print: paged
+  #html_document
+---
+
+
+***
+
+## Module Assignment Questions
+## *Applications*
+
+You will perform four unsupervised methods on a high dimensional data: `PCA`, `K-Means` clustering, `hierarchical` clustering, and one of `DBSCAN` and `GMM` clusterings. The data is the `NCI60` cancer cell line microarray data set, which consists of 6,830 gene expression measurements on 64 cancer cell lines. Each cell line is labeled with a cancer type: there is 14 imbalanced types. In performing unsupervised methods, we don't use labels. But after performing the clustering, we can check to see the extent to which these cancer types agree with the results of these unsupervised techniques. You will do this as well.
+
+Do scaling before performing any unsupervised methods. Then, apply each method by justifying how you use and by including informative plots and summaries: each method has parameters and hyperparameters, consider these. Show how you decide optimal numbers of clusters. There is no unique answer key: any decision should be justified as long as you reflect our lab discussions and details. Don't include irrelevant and uncommented results. Make write-ups and outputs readable and compact. Include only necessary codes and outputs.
+
+Fit the four models below, include narratives and answer the questions:
+
+1. PCA
+
+2. K-Means
+
+3. Hierarchical
+
+4. DBSCAN or GMM
+
+5. Do the comparison of the four methods above in a table by fitted clusters and true clusters: did clustering methods discover correct clusters? Include an accuracy table or a graph that compares the results obtained from the four methods. Comment.
+
+6. What insights/contextual conclusions did you get about the data from the PCA application? Explain. 
+
+BONUS. Use any `manifold` method to cluster the data in terms of cancer types. Then check with the true labels. Does it discover? Explain and include graphs.
+
+***
+\newpage
+
+## Your Solutions
+
+1) 
+
+
+```{r}
+#import data
+library(ISLR)
+dim(NCI60)
+nci.labs=NCI60$labs
+unique(nci.labs) #14 types of cancer labelled (use this to check the clusters)
+nci_label=c(1,1,1,2,3,1,1,3,4,4,
+            2,2,2,2,2,2,2,3,4,2,
+            5,6,7,8,6,6,6,6,6,8,
+            4,4,4,9,10,11,9,9,9,9,
+            9,12,12,12,12,12,12,12,13,3,
+            14,3,4,4,4,7,3,3,7,7,
+            7,7,7,7)
+length(unique(nci.labs)) #14
+nci.data=NCI60$data
+dim(nci.data) #64 6830
+length(nci.labs) #64
+table(nci.labs)
+#sclae
+data_scale = scale(nci.data)
+#to assign a color to each of the cancer type so
+#you can use `col = Cols(nci .labs)` in plot argument
+Cols= function(vec){
+cols= rainbow(length(unique(vec)))
+return (cols[as.numeric(as.factor(vec))])
+}
+```
+
+
+```{r}
+#1.PC
+##PC with USArrests data
+states=row.names(data_scale)
+names(data_scale)
+pr.out=prcomp(nci.data, scale=TRUE)
+names(pr.out)
+summary(pr.out)
+plot(pr.out)
+dim(pr.out$x)
+
+#Plot percentages
+pve=100*pr.out$sde^2/sum(pr.out$sdev^2)
+par(mfrow=c(1,2))
+plot(pve, type="o", ylab="PVE", xlab="Principal Component", col="blue")
+plot(cumsum(pve), type="o", ylab="Cumulative PVE", xlab="Principal Component", col="brown3")
+#see first 32 PCs get 80%
+```
+From the Proportion of Variance, we see that the PC1 has an importance of 11.36% in predicting the class while the PC2 has an importance of 6.756% and so on. This means that using just the PC1 instead of all the features will make our model accuracy to be about 11.36% while we use only 1/64 of the entire set of features.
+
+
+If we want the higher accuracy, we can take the PCs together and obtain a cumulative accuracy of up to 80.072% when we take 32 PCs together, which is already higher than the baseline 80%. This is how the PCA does the data reduction. It reduces the overwhelming number of dimensions by PCs. So, we don't need to use all 64 PCs, instead, we only need to use 32 PCs to reach the baseline. 
+
+
+In addition, we can also find PC32 from the PVE plot. Because when the cumulative PVE reaches 80, the principle component is about 30.
+
+
+If we see the two plots together, we will find that about the first 10 PCs explain about 40 % of the variance in the data. We can see summary(pr.out) that there is a decrease in the variance explained by further PCs. The slope becomes flatter after about the PC10. This means that there might be little benefit to test more than 10 PCs. But since 80% is the baseline, we still need to find more PCs.
+```{r}
+#Plot PC1, PC2, PC3 with true cancer types: do these cluster and do good job?
+par(mfrow=c(1,2))
+plot(pr.out$x[,1:2], col=Cols(nci.labs), pch=19,xlab="Z1",ylab="Z2",main="PC1 & PC2")
+plot(pr.out$x[,c(1,3)], col=Cols(nci.labs),pch=19,xlab="Z1",ylab="Z3",ain="PC1 & PC3")
+#These PCs take account of at most 20%. Get insights.
+plot(pr.out$x[,c(1,15)], col=Cols(nci.labs),pch=19,xlab="Z1",ylab="Z15",ain="PC1 & PC15")
+plot(pr.out$x[,c(1,25)], col=Cols(nci.labs),pch=19,xlab="Z1",ylab="Z25",ain="PC1 & PC25")
+plot(pr.out$x[,c(1,32)], col=Cols(nci.labs),pch=19,xlab="Z1",ylab="Z32",ain="PC1 & PC32")
+
+#obtain loadings and interpret:
+hist(as.vector(pr.out$rotation[,1])) #PC1 loadings
+```
+The plots show clusters of samples based on their similarity. 
+We can see from the plot PC1 & PC2 that PC1 and PC2 work very well because dots with the same colors gather together in the same areas. Dots with different colors separate in different areas in the plot. The red dots is an exception because they do not cluster. However, these PCs take account of at most 20%. 
+
+
+We can see from the plot PC1 & PC3 that PC1 and PC3 do not work as well as the first plot because dots with different colors mix together in the plot, though dots with the same colors gather together.  
+
+
+Using the same idea, we can find that PC1 and PC2 give the best plot and work the best among these 5 plots. However, PC15, PC25,and PC32 take account of more percentage of the data. This is a trade off. If we want better plot, we reducing our data to about 18%. If we want higher accuracy, we get worse plots.
+***
+2)
+```{r}
+# 2.K-MEANS CLUSTERING ----
+## CLUSTERING
+
+##3.KMeans
+set.seed(99)
+
+## CHOOSING K in kmeans
+#using sse and rsq to determine optimal k with scaled data
+sse = rep(0,9)
+for (i in 1:9) {
+  fit = kmeans(data_scale,centers=i)
+  sse[i] = fit$totss-fit$betweenss
+}
+plot(sse,type='b')
+
+#use this one: a statistic: BetweenVariation/TotalSS
+r2 = rep(0,9)
+for (i in 1:9) {
+  fit = kmeans(data_scale,centers=i)
+  r2[i] = fit$betweenss/fit$totss
+}
+plot(r2,type='b')
+```
+We can see from the plot that k=9 is the best because it has the lowest sse and highest $R^2$. So, we use center = 9 in the k-means method. We can also see from table(nci.labs) that there are 8 cancers that have relative more patients. We can merge other cancers which have only 1 or 2 patients together. Therefore, we can use center = 9.
+```{r}
+#try cluster 4:14
+table(nci.labs)
+km.out=kmeans(data_scale, centers = 9, nstart=20)
+km.clusters=km.out$cluster
+km.clusters
+plot(data_scale, col=(km.clusters +1), main="K-Means Clustering Results", xlab="", ylab="", pch=19, cex=2)
+#compare the clusters to true labels to check: interpret
+cbind(km.clusters, nci.labs)
+table(km.clusters,nci.labs)#9,13
+#which cancer clustered is majority, give this same cancer name to the cluster. then obtain accuracy
+#accuracy
+sum(nci_label==km.clusters)/length(nci.labs)
+cat("The accuracy is", sum(nci_label==km.clusters)/length(nci.labs), ".")
+```
+We can see from the table that km.clusters4 detects the most cancer patients. It detects 1 in COLON, 1 in MELANOMA, 4 in NSCLC, 5 in OVARIAN, 2 in PROSTATE, 4 in RENAL, and 1 in UNKNOWN. km.clusters4 detects the most patients in NSCLC, OVARIAN, PROSTATE, RENAL, and UNKNOWN. Also, it detects all patients in PROSTATE, and UNKNOWN. km.clusters2 detects all patients in  K562A-repro and K562B-repro. km.clusters8 detects all patients in MCF7A-repro and MCF7D-repro.
+
+
+***
+3)
+
+
+```{r}
+# 3.HIERACHICAL CLUSTERING ----
+##2.Clustering the Observations of the NCI60 Data
+par(mfrow=c(1,3)) 
+#row-wise Euclidean distance on scaled data
+data.dist=dist(data_scale)
+#data.dist=dist(t(data_scale))
+#plot the clusters using complete, aver, single, ward.D2, and centroid
+plot(hclust(data.dist), labels=nci.labs, main="Complete Linkage", xlab="", sub="",ylab="")
+plot(hclust(data.dist, method="average"), labels=nci.labs, main="Average Linkage", xlab="", sub="",ylab="")
+plot(hclust(data.dist, method="single"), labels=nci.labs, main="Single Linkage", xlab="", sub="",ylab="")
+plot(hclust(data.dist, method="ward.D2"), labels=nci.labs, main="ward.D2 Linkage", xlab="", sub="",ylab="")
+plot(hclust(data.dist, method="centroid"), labels=nci.labs, main="centroid Linkage", xlab="", sub="",ylab="")
+#Let's cut
+hc.out=hclust(dist(data_scale))
+hc.out
+hc.out$cluster
+plot(hc.out, labels=nci.labs) #hang = -1
+abline(h=139, col="pink")
+rect.hclust(hc.out, k = 4, border = "red")
+rect.hclust(hc.out, k = 14, border = "blue")
+
+#cut at 4 (or 4:14) and see the majority of cancer types
+#try 4
+hc.clusters1=cutree(hc.out,4) #the best result is cluster 1 (29 cancer number)
+table(hc.clusters1,nci.labs)
+#try 6
+hc.clusters2=cutree(hc.out,6)#the best is cluster 1 (28 cancer number)
+table(hc.clusters2,nci.labs)
+#try 9
+hc.clusters3=cutree(hc.out,9)#the best is cluster 1 (29 cancer number)
+table(hc.clusters3,nci.labs)
+#try 13
+hc.clusters4=cutree(hc.out,13)#the best is cluster 1 (15 cancer number)
+table(hc.clusters4,nci.labs)
+#try 14
+hc.clusters5=cutree(hc.out,14)#the best is cluster 4 (14 cancer number)
+table(hc.clusters5,nci.labs)
+#which cancer clustered is majority, give this same cancer name to the cluster. then obtain accuracy
+sum(nci_label==hc.clusters5)/64
+cat("The accuracy is", sum(nci_label==hc.clusters5)/64, ".")
+```
+As seeing the majority of cancer types, I tried cut at 4,6,9,13,14 and find the cluster with highest number of cancer in each situation. Among these numbers of caners, we pick the lowest-number hc.cluster as the pone we use since the lower and better as this shows homogeneous clusters. in these trials, We find hc.clusters5 in which the best is cluster 4 is the one we will pick to use and calculate the accuracy. 
+We can see from the table that hc.clusters5 cluster4 detects the most cancer patients. It detects 2 in COLON, 1 in MELANOMA, 5 in NSCLC, 4 in OVARIAN, 2 in PROSTATE. cluster4 detects the most patients in NSCLC, OVARIAN, PROSTATE. 
+
+
+***
+4)
+```{r}
+memory.limit()
+memory.limit(size=18000)
+```
+
+```{r}
+# GMM - Distribution-based or MODEL-BASED Gaussian CLUSTERING ----
+library(mclust)
+citation("mclust")
+fitM <- Mclust(data_scale, G=14)
+fitM$parameters$variance$sigmasq
+fitM$parameters$variance$scale
+tb<-table(fitM$classification,nci.labs)
+tb
+```
+We can see from the table that cluster4 detects the most cancer patients. It detects 1 in MELANOMA, 6 in NSCLC, 2 in OVARIAN, 2 in PROSTATE. cluster4 detects the most patients in NSCLC and PROSTATE.
+
+```{r}
+tb1<-table(nci_label, fitM$classification)
+tb1
+library(dbscan)
+##HULL Plots with clusters
+set.seed(99)
+cl <- nci_label #true clusters
+
+### original data with true clustering
+hullplot(data_scale, cl, main = "True clusters", col=Cols(nci.labs))
+
+### run some clustering algorithms and plot the results
+db <- dbscan(data_scale, eps = .07, minPts = 65)
+hullplot(data_scale, db, main = "DBSCAN")
+
+op <- optics(data_scale, eps = 10, minPts = 65)
+opDBSCAN <- extractDBSCAN(op, eps_cl = .07)
+hullplot(data_scale, opDBSCAN, main = "OPTICS")
+```
+I did several graphs to see original data with true clustering, hull plots with clusters, and some clustering algorithms and plot the results.
+
+
+***
+5)
+
+
+According to the accuracy comparison, we find the accuracy of PCA is the highest among the 4 methods. PCA model required significantly fewer features to describe 80% and even 95% of the variability of the data. besides normalizing data and avoiding over-fitting potentially, PCA also uncorrelates the variables, sometimes improving the performance of other modeling techniques. K-means can be expressed as a special case of the Gaussian mixture model. In general, the Gaussian mixture is more expressive because membership of a data item to a cluster is dependent on the shape of that cluster, not just its proximity.
+
+
+As with k-means, training a Gaussian mixture model with EM can be quite sensitive to initial starting conditions. If we compare and contrast GMM to k-means, we’ll find a few more initial starting conditions in the former than in the latter. In particular, not only must the initial centroids be specified, but the initial covariance matrices and mixture weights must be specified also. Among other strategies, one approach is to run k-means and use the resultant centroids to determine the initial starting conditions for the Gaussian mixture model.
+
+
+According to the plots, we see that the original data with true clustering does not fit well with kmeans, hc, and gmm clustering plot.
+```{r}
+### original data with true clustering
+hullplot(data_scale, cl, main = "True clusters", col=Cols(nci.labs))
+#kmeans
+km <- kmeans(data_scale, centers = 9)
+hullplot(data_scale, km, col=Cols(nci.labs), main = "k-means")
+#hc
+hc <- cutree(hclust(dist(data_scale)), k = 14)
+hullplot(data_scale, hc, col=Cols(nci.labs), main = "Hierarchical Clustering")
+
+a1=0.80072
+a2=0.1875
+a3=0.21875
+a4="See Plot"
+  
+A=as.matrix(t(c(a1,a2,a3,a4)))
+colnames(A)=c("PCA","K-Means", "Hierarchical", "DBSCAN or GMM")
+rownames(A)=c("Accuracy")
+A
+# Lets use a better format from table
+knitr::kable(A, caption = "Accuracy table that compares the
+results obtained from the four methods")
+```
+
+
+***
+6)
+
+
+From the textbook, we know that principal component analysis is an unsupervised approach. When we use CPA, we compute CPs and use them to understand the data. CPA can not only produce derived variables for use in supervised learning problems, but it's also a tool to visualize data. Once we have computed the PCs, we can plot them against each other to produce low-dimensional views of the data. We usually look at the first few PCs to find interesting patterns in the data, and we did find that cells of a single cancer type tend to have similar values on the first 2 principal component score vectors, which means that cells from the same cancer type tend to have similar gene expression levels. Therefore, from the plots and tables generated by CPA, we are able to determine clusters of cancer types easier. 
+
+***
+
+BONUS:
+
+
+High-dimensional datasets can be very difficult to visualize, so we need to reduce the dimension to better visualize the datasets. The data can be represented by a manifold. Therefore, manifolds can be used as a stepping stone from a complex space to a simpler subset. "Manifold Learning generalize linear frameworks like PCA to be sensitive to non-linear structure in data."
+```{r}
+install.packages('reticulate')
+library('reticulate')
+install.packages('umap')
+library(umap)
+nci.umap = umap::umap(nci.data)
+nci.umap
+
+#cluster the data in terms of cancer types
+head(nci.umap$layout)
+plot(nci.umap$layout,col=Cols(nci.labs),pch=19, asp = 1,
+     xlab = "UMAP_1",ylab = "UMAP_2",
+     main = "A UMAP visualization of the nci dataset")
+
+#check with the true labels
+sum(nci_label==nci.umap$layout)/length(nci.labs)
+
+nci.dist = as.matrix(dist(nci.data))
+nci.umap.dist = umap(nci.dist, config=umap.defaults, input="dist")
+nci.umap.dist
+nci.umap$knn
+nci.neighbors = nci.umap$knn$indexes[, 1:10]
+nci.neighbors.distances = nci.umap$knn$distances[, 1:10]
+nci.knn.10 = umap.knn(indexes=nci.neighbors, distances=nci.neighbors.distances)
+nci.knn.10
+umap(nci.data, config=umap.defaults, n_neighbors=10, knn=nci.knn.10)
+```
+We can see from the plot that different cancer types cluster in different areas. Red dots are relatively dispersive. Yellow dots, light-blue dots, orange dots, and green dots are relatively compact. It doesn't discover correct clusters. 
+
+***
+
+
+
+\newpage
+
+### Write comments, questions: ...
+
+
+***
+I hereby write and submit my solutions without violating the academic honesty and integrity. If not, I accept the consequences. 
+
+### List the fiends you worked with (name, last name): Xubin Lou
+
+### Disclose the resources or persons if you get any help:
+https://cran.r-project.org/web/packages/umap/vignettes/umap.html
+https://towardsdatascience.com/manifolds-in-data-science-a-brief-overview-2e9dde9437e5
+https://scikit-learn.org/stable/modules/manifold.html#isomap
+
+### How long did the assignment solutions take?: ...
+
+
+***
+## References
+...

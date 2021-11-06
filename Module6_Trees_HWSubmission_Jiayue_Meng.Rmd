@@ -1,0 +1,554 @@
+---
+title: "Module 6 Assignment on Trees and Boosting"
+author: "Jiayue Meng // Undergraduate Student"
+date: "4/1/2021"
+#output: pdf_document
+output:
+  pdf_document: default
+  df_print: paged
+  #html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=80))
+```
+
+
+
+
+***
+
+\newpage{}
+
+
+***
+## Module Assignment
+
+You will apply tree, bagging, random forests, and boosting methods to the `Caravan` data set with 5,822 observations on 86 variables with a binary response variable. This is a classification problem.
+
+The data contains 5,822 real customer records. Each record consists of 86 variables, containing socio-demographic data (variables 1-43) and product ownership (variables 44-86). The socio-demographic data is derived from zip codes. All customers living in areas with the same zip code have the same socio-demographic attributes. Variable 86 (Purchase) is the target/response variable, indicating whether the customer purchased a caravan insurance policy. Further information on the individual variables can be obtained at http://www.liacs.nl/~putten/library/cc2000/data.html
+
+Fit the models on the training set (as the split shown at the bottom codes) and to evaluate their performance on the test set. Use the R lab codes. Feel free to use other packs (caret) and k-fold methods if you like.
+
+
+***
+## Q1) (*Modeling*) 
+
+a. Create a training set consisting from random 4,000 observations (shuffled and then split) with the seed with `set.seed(99)` and a test set consisting of the remaining observations (see the code at the bottom). Do a brief EDA on the target variable. Overall, describe the data. Do you think a samll number of predictors suffice to get the good results?
+
+b. Fit a `logistic regression` to the training set with `Purchase` as the response and all the other variables as predictors. Report the $Accuracy$ score on the train and test data sets. Discuss if any issues observed.
+
+c. Fit a `classification tree` model to the training set with `Purchase` as the response and all the other variables as predictors. Use cross-validation `cv.tree()` in order to determine the optimal level of tree complexity and prune the tree. Then, report the $Accuracy$ score on the train and test data sets. If the R command gives errors, make necessary fixes to run the model. Discuss if any issues observed.
+
+d. Use the `bagging approach` on the classification trees model to the training set with `Purchase` as the response and all the other variables as predictors. Report the $Accuracy$ score on the train and test data sets. Discuss if any issues observed.
+
+e. Use the `random forests` on the classification trees model to the training set with `Purchase` as the response and all the other variables as predictors. Find the optimal `mtry` and `ntree` with a sophisticated choice (no mandatory to make cross-validation, just try some) and report these. Report the $Accuracy$ score on the train and test data sets. Discuss if any issues observed.
+
+
+f. Perform `boosting` on the training set with `Purchase` as the response and all the other variables as predictors. Find the optimal `shrinkage` value and `ntree` with a sophisticated choice (no mandatory to make cross-validation, just try some) and report these. Report the $Accuracy$ score on the train and test data sets. Discuss if any issues observed.
+
+
+***
+## Q2) (*Discussion and Evaluation*) 
+
+a. Overall, compare the five models (parts b-f) in Question#1. Which one is the best  in terms of $Accuracy$? Also, what fraction of the people predicted to make a purchase do in fact make one for on each model (use test data, what is called this score?)? Accuracy or this score: which one do you prefer to evaluate models? 
+
+b. Determine which four features/predictors are the most important in the `random forests` and `boosting` models fitted. Include graphs and comments. Are they same features? Why? 
+
+c. Joe claimed that his model accuracy on the prediction for the same problem is 94%. Do you think this is a good model? Explain.
+
+d. (BONUS) How to deal with `imbalanced data` in modeling? Include your solution and one of model's test result to handle this issue. Did it improve?
+
+e. (BONUS) What happens to the results if you scale the features? Discuss.
+
+\newpage
+
+***
+
+## Your Solutions
+
+Q1) 
+
+Part a:
+```{r}
+#remove all objects and clean figures
+rm(list = ls())
+library(tree) #class and reg trees
+library(ISLR) #if needed
+##dataset
+attach(Caravan)
+dim(Caravan) #5822x86
+colnames(Caravan)
+str(Caravan)
+summary(Caravan)
+#check
+Caravan$Purchase
+table(Caravan$Purchase)
+#imbalanced data issue AND sparsity
+prop.table(table(Caravan$Purchase))
+plot(Caravan$Purchase)
+#recode the target variable: you will need one of them for models, just aware
+Caravan$Purchase = ifelse(Caravan$Purchase == "Yes", 1, 0)
+#shuffle, split train and test
+set.seed(99)
+rows <- sample(nrow(Caravan))
+train = rows[1:4000] #1:4000
+#split
+Caravan.train = Caravan[train, ]
+#train target
+table(Caravan.train$Purchase)
+#split
+Caravan.test = Caravan[-train, ]
+#test target
+table(Caravan.test$Purchase)
+#dims
+dim(Caravan.train) #4000x86
+dim(Caravan.test) #1822x86
+summary(Caravan$Purchase)
+hist(Caravan$Purchase)
+    
+```
+We can see from the histogram that the people who choose not to purchased a caravan insurance policy is much more than the people who choose to purchased a caravan insurance policy. I think a samll
+number of predictors do not suffice to get the good results because we have only 86 variavle, which is a small number.
+***
+Part b:
+```{r}
+attach(Caravan)
+glm.fit=glm(Purchase~. ,data=Caravan.train,family=binomial)
+#train set
+glm.probs.train=predict(glm.fit,Caravan.train,type="response")
+glm.pred.train=rep(0,4000)
+glm.pred.train[glm.probs.train>.5]=1
+ct1_tr=table(Caravan.train$Purchase, glm.pred.train)
+cat("\nThe accuracy score for the train set with logistic regression is ",(ct1_tr[1]+ct1_tr[4])/(ct1_tr[1]+ct1_tr[2]+ct1_tr[3]+ct1_tr[4])*100,"%.\n")
+#test set
+glm.probs.test=predict(glm.fit,Caravan.test,type="response")
+glm.pred.test=rep(0,1822)
+glm.pred.test[glm.probs.test>.5]=1
+ct1_te=table(Caravan.test$Purchase, glm.pred.test)
+cat("\nThe accuracy for the test set with logistic regression is ",(ct1_te[1]+ct1_te[4])/(ct1_te[1]+ct1_te[2]+ct1_te[3]+ct1_te[4])*100,"%.\n")
+detach(Caravan)
+```
+
+
+***
+Part c:
+```{r}
+tree.caravan.train=tree(as.factor(Purchase)~.,
+                        Caravan.train)
+#see performances and details
+summary(tree.caravan.train)
+plot(tree.caravan.train)
+text(tree.caravan.train,pretty=0) 
+tree.caravan.train
+#train set
+set.seed(99)
+tree.train.pred=predict(tree.caravan.train,Caravan.train,type="class")
+tree.train.pred
+#confusion matrix:put first true classes
+cm_train=table(Caravan.train[,86], tree.train.pred) #(?+?)/?
+cm_train
+#get accuracy score
+cal_acc=function(t){
+  return((t[1]+t[4])/sum(t))
+}
+m1=cal_acc(cm_train) #train
+m1
+cat("The accuracy for train set with classification tree is", m1)
+
+#test set
+set.seed(99)
+cv.caravan.train=cv.tree(tree.caravan.train,FUN=prune.misclass) #change FUN to other metrics
+names(cv.caravan.train)
+cv.caravan.train
+#plots
+par(mfrow=c(1,2))
+plot(cv.caravan.train$size,cv.caravan.train$dev,type="b")
+plot(cv.caravan.train$k,cv.caravan.train$dev,type="b")
+##prune and best 2 nodes
+#apply prune.misclass to prune
+prune.caravan=prune.misclass(tree.caravan.train,best=2)
+plot(prune.caravan)
+text(prune.caravan,pretty=0)
+#is this pruned tree better?
+tree.test.pred=predict(prune.caravan,Caravan.test, type="class")
+tree.test.pred
+#confusion matrix:put first true classes
+cm_test=table(Caravan.test[,86], tree.test.pred) #(?+?)/?
+cm_test
+prop.table(cm_test)
+#get accuracy score
+cal_acc=function(t){
+  return((t[1]+t[4])/sum(t))
+}
+m2=cal_acc(cm_test)# test
+m2
+cat("\nThe accuracy for test set with classification tree is", m2)
+```
+We observed issues that when we prune the tree, we can not use best=1 because this will cause an error in xy.coords(x, y, xlabel, ylabel, log) : 'x' is a list, but does not have components 'x' and 'y'. Thus, we changed to best=2, so that we can run the code successfully.
+
+***
+Part d:
+```{r}
+## Bagging and Random Forests
+library(randomForest)
+?randomForest
+dim(Caravan)
+#Bagging
+#when m=p, this is just a random forest
+set.seed(99)
+#shrn mtry=p, it is bagging
+bag.caravan=randomForest(as.factor(Purchase)~.,data=Caravan.train,
+                        mtry=85,
+                        importance=TRUE)
+bag.caravan
+#discuss the input, arguments and output
+
+#predict with train data
+yhat.bag = predict(bag.caravan,newdata=Caravan.train[,1:85])
+ct3_tr=table(Caravan.train[,86],yhat.bag)
+ct3_tr
+x1=sum(yhat.bag==Caravan.train[,86])/length(yhat.bag)
+cat("The accuracy for train set with bagging approach is", x1)
+#predict with test data
+yhat.bag2 = predict(bag.caravan,newdata=Caravan.test[,1:85])
+ct3_te=table(Caravan.test[,86],yhat.bag2)
+ct3_te
+x2=sum(yhat.bag2==Caravan.test[,86])/length(yhat.bag2)
+cat("The accuracy for test set with bagging approach is", x2)
+```
+
+***
+Part e:
+
+
+According to the results of accuracy we get from trying different mtrys and ntrees, we find when mtry=2, ntree=100, there's a largest accuracy for test set, so we use this optimal combination of mtry and ntree to calculate the accuracy for train set and test set.
+```{r}
+#Random tree
+library(randomForest)
+strg =matrix(rep(0,2*5),ncol=2,nrow=5)
+x<-c(1:5)
+n=1
+for (val in x)
+{
+bag.caravan=randomForest(as.factor(Purchase)~.,data=Caravan.train,
+                        mtry=val,
+                        ntree=500,
+                        importance=TRUE)
+bag.caravan
+#predict with train data
+yhat.bag = predict(bag.caravan,newdata=Caravan.train[,1:85])
+
+a1=sum(yhat.bag==Caravan.train[,86])/length(yhat.bag)
+#predict with train data
+yhat.bag2 = predict(bag.caravan,newdata=Caravan.test[,1:85])
+a2=sum(yhat.bag2==Caravan.test[,86])/length(yhat.bag2)
+strg[n,1]=a1
+strg[n,2]=a2
+n=n+1
+}
+strg
+
+strg1 =matrix(rep(0,2*5),ncol=2,nrow=5)
+x<-c(1:5)
+n=1
+for (val in x)
+{
+bag.caravan=randomForest(as.factor(Purchase)~.,data=Caravan.train,
+                        mtry=val,
+                        ntree=200,
+                        importance=TRUE)
+bag.caravan
+#predict with train data
+yhat.bag = predict(bag.caravan,newdata=Caravan.train[,1:85])
+
+a1=sum(yhat.bag==Caravan.train[,86])/length(yhat.bag)
+#predict with train data
+yhat.bag2 = predict(bag.caravan,newdata=Caravan.test[,1:85])
+a2=sum(yhat.bag2==Caravan.test[,86])/length(yhat.bag2)
+strg1[n,1]=a1
+strg1[n,2]=a2
+n=n+1
+}
+strg1
+
+strg2 =matrix(rep(0,2*5),ncol=2,nrow=5)
+x<-c(1:5)
+n=1
+for (val in x)
+{
+bag.caravan=randomForest(as.factor(Purchase)~.,data=Caravan.train,
+                        mtry=val,
+                        ntree=100,
+                        importance=TRUE)
+bag.caravan
+#predict with train data
+yhat.bag = predict(bag.caravan,newdata=Caravan.train[,1:85])
+
+a1=sum(yhat.bag==Caravan.train[,86])/length(yhat.bag)
+#predict with train data
+yhat.bag2 = predict(bag.caravan,newdata=Caravan.test[,1:85])
+a2=sum(yhat.bag2==Caravan.test[,86])/length(yhat.bag2)
+strg2[n,1]=a1
+strg2[n,2]=a2
+n=n+1
+}
+strg2
+#compare each result and pick the optimal number of predictors mtry. try ntree=100,200,500 to see which one is better
+
+bag.caravan=randomForest(as.factor(Purchase)~.,data=Caravan.train,
+                        mtry=2,
+                        ntree=100,
+                        importance=TRUE)
+bag.caravan
+#predict with train data
+yhat.bag = predict(bag.caravan,newdata=Caravan.train[,1:85])
+ct4_tr=table(Caravan.train[,86],yhat.bag)
+ct4_tr
+a1=sum(yhat.bag==Caravan.train[,86])/length(yhat.bag)
+a1
+cat("The accuracy for train set with random forests is", a1)
+
+#predict with train data
+yhat.bag2 = predict(bag.caravan,newdata=Caravan.test[,1:85])
+ct4_te=table(Caravan.test[,86],yhat.bag2)
+ct4_te
+a2=sum(yhat.bag2==Caravan.test[,86])/length(yhat.bag2)
+a2
+cat("The accuracy for test set with random forests is", a2)
+```
+
+***
+Part f:
+
+
+According to the results of accuracy we get from trying different shrinkage and n.trees, we find when shrinkage=0.006, n.trees=500, there's a largest accuracy for test set, so we use this optimal combination of shrinkage and n.trees to calculate the accuracy for train set and test set.
+```{r}
+library(gbm)
+set.seed(99)
+boost.caravan=gbm(Purchase~.,data=Caravan.train,
+                 distribution="bernoulli",
+                 n.trees=500,
+                 interaction.depth=2,
+                 shrinkage=0.1,
+                 verbose=F)
+summary(boost.caravan)
+yhat.boost1=predict(boost.caravan,newdata=Caravan.test[,1:85],n.trees=500,type="response")
+yhat.boost1=ifelse(yhat.boost1>0.5,1,0) 
+ct5_te=table(Caravan.test$Purchase, yhat.boost1)
+boost.test.accuracy=(ct5_te[1]+ct5_te[4])/(ct5_te[1]+ct5_te[2]+ct5_te[3]+ct5_te[4])
+boost.test.accuracy
+
+set.seed(99)
+boost.caravan=gbm(Purchase~.,data=Caravan.train,
+                 distribution="bernoulli",
+                 n.trees=200,
+                 interaction.depth=2,
+                 shrinkage=0.1,
+                 verbose=F)
+summary(boost.caravan)
+yhat.boost1=predict(boost.caravan,newdata=Caravan.test[,1:85],n.trees=200,type="response")
+yhat.boost1=ifelse(yhat.boost1>0.5,1,0) 
+ct5_te=table(Caravan.test$Purchase, yhat.boost1)
+boost.test.accuracy=(ct5_te[1]+ct5_te[4])/(ct5_te[1]+ct5_te[2]+ct5_te[3]+ct5_te[4])
+boost.test.accuracy
+
+set.seed(99)
+boost.caravan=gbm(Purchase~.,data=Caravan.train,
+                 distribution="bernoulli",
+                 n.trees=100,
+                 interaction.depth=2,
+                 shrinkage=0.1,
+                 verbose=F)
+summary(boost.caravan)
+yhat.boost1=predict(boost.caravan,newdata=Caravan.test[,1:85],n.trees=100,type="response")
+yhat.boost1=ifelse(yhat.boost1>0.5,1,0) 
+ct5_te=table(Caravan.test$Purchase, yhat.boost1)
+boost.test.accuracy=(ct5_te[1]+ct5_te[4])/(ct5_te[1]+ct5_te[2]+ct5_te[3]+ct5_te[4])
+boost.test.accuracy
+
+set.seed(99)
+boost.caravan=gbm(Purchase~.,data=Caravan.train,
+                 distribution="bernoulli",
+                 n.trees=200,
+                 interaction.depth=2,
+                 shrinkage=0.05,
+                 verbose=F)
+summary(boost.caravan)
+yhat.boost1=predict(boost.caravan,newdata=Caravan.test[,1:85],n.trees=200,type="response")
+yhat.boost1=ifelse(yhat.boost1>0.5,1,0) 
+ct5_te=table(Caravan.test$Purchase, yhat.boost1)
+boost.test.accuracy=(ct5_te[1]+ct5_te[4])/(ct5_te[1]+ct5_te[2]+ct5_te[3]+ct5_te[4])
+boost.test.accuracy
+
+set.seed(99)
+boost.caravan=gbm(Purchase~.,data=Caravan.train,
+                 distribution="bernoulli",
+                 n.trees=200,
+                 interaction.depth=2,
+                 shrinkage=0.03,
+                 verbose=F)
+summary(boost.caravan)
+yhat.boost1=predict(boost.caravan,newdata=Caravan.test[,1:85],n.trees=200,type="response")
+yhat.boost1=ifelse(yhat.boost1>0.5,1,0) 
+ct5_te=table(Caravan.test$Purchase, yhat.boost1)
+boost.test.accuracy=(ct5_te[1]+ct5_te[4])/(ct5_te[1]+ct5_te[2]+ct5_te[3]+ct5_te[4])
+boost.test.accuracy
+
+set.seed(99)
+boost.caravan=gbm(Purchase~.,data=Caravan.train,
+                 distribution="bernoulli",
+                 n.trees=500,
+                 interaction.depth=2,
+                 shrinkage=0.006,
+                 verbose=F)
+summary(boost.caravan)
+yhat.boost1=predict(boost.caravan,newdata=Caravan.test[,1:85],n.trees=500,type="response")
+yhat.boost1=ifelse(yhat.boost1>0.5,1,0) 
+ct5_te=table(Caravan.test$Purchase, yhat.boost1)
+boost.test.accuracy=(ct5_te[1]+ct5_te[4])/(ct5_te[1]+ct5_te[2]+ct5_te[3]+ct5_te[4])
+boost.test.accuracy
+
+set.seed(99)
+boost.caravan=gbm(Purchase~.,data=Caravan.train,
+                 distribution="bernoulli",
+                 n.trees=500,
+                 interaction.depth=2,
+                 shrinkage=0.01,
+                 verbose=F)
+summary(boost.caravan)
+yhat.boost1=predict(boost.caravan,newdata=Caravan.test[,1:85],n.trees=500,type="response")
+yhat.boost1=ifelse(yhat.boost1>0.5,1,0) 
+ct5_te=table(Caravan.test$Purchase, yhat.boost1)
+boost.test.accuracy=(ct5_te[1]+ct5_te[4])/(ct5_te[1]+ct5_te[2]+ct5_te[3]+ct5_te[4])
+boost.test.accuracy
+
+
+#fit
+#when classification problem, use distribution="bernoulli"
+set.seed(99)
+boost.caravan=gbm(Purchase~.,data=Caravan.train,
+                 distribution="bernoulli",
+                 n.trees=500,
+                 interaction.depth=2,
+                 shrinkage=0.006,
+                 verbose=F)
+summary(boost.caravan)
+#train set
+yhat.boost=predict(boost.caravan,newdata=Caravan.train[,1:85],n.trees=500,type="response")
+yhat.boost=ifelse(yhat.boost>0.5,1,0) 
+yhat.boost
+#confusion matrix
+ct5_tr=table(Caravan.train$Purchase, yhat.boost)
+ct5_tr
+#boost.train.accuracy=sum(yhat.boost==Caravan.train[,86])/length(yhat.boost)
+boost.train.accuracy=(ct5_tr[1]+ct5_tr[4])/(ct5_tr[1]+ct5_tr[2]+ct5_tr[3]+ct5_tr[4])
+cat("The accuracy for train set with boosting is", boost.train.accuracy)
+
+#trest set
+yhat.boost1=predict(boost.caravan,newdata=Caravan.test[,1:85],n.trees=500,type="response")
+yhat.boost1=ifelse(yhat.boost1>0.5,1,0) 
+yhat.boost1
+#confusion matrix
+ct5_te=table(Caravan.test$Purchase, yhat.boost1)
+ct5_te
+#boost.test.accuracy=sum(yhat.boost1==Caravan.test[,86])/length(yhat.boost1)
+boost.test.accuracy=(ct5_te[1]+ct5_te[4])/(ct5_te[1]+ct5_te[2]+ct5_te[3]+ct5_te[4])
+boost.test.accuracy
+cat("The accuracy for test set with boosting is", boost.test.accuracy)
+```
+
+***
+
+
+\newpage
+
+## Q2) 
+
+Part a:
+
+Part C and Part E are the best in terms of Accuracy since they have the biggest accuracy. The score is called precision. Since the precision in the classification model and random forest model are NaN %, which means 0/0, no one predicted to make a purchase.I prefer to use precision score to evaluate models. Because of the imbalanced data issue and sparsity, this means that using Accuracy (TP+TN)/ALL which need to include all data into consideration is improper. Thus, the precision TP/(TP+FP) which focus on the true part data is better than the accuracy to evaluate models. Thus, the accuracy score is not an appropriate approach to evaluate the performances of the models. 
+
+
+As we can see, the precision scores for these models are unusually small and even NaN according to the models we get from finding the larger test accuracy. 
+```{r}
+cat("\nThe accuracy for the test set with logistic regression is ",(ct1_te[1]+ct1_te[4])/(ct1_te[1]+ct1_te[2]+ct1_te[3]+ct1_te[4])*100,"%.\n")
+cat("\nThe accuracy for test set with classification tree is", m2)
+cat("\nThe accuracy for test set with bagging approach is", x2)
+cat("\nThe accuracy for test set with random forests is", a2)
+cat("\nThe accuracy for test set with boosting is", boost.test.accuracy)
+
+ct1_te
+cat("\nThe precision for the test set in logistic regression is ",(ct1_te[4])/(ct1_te[3]+ct1_te[4])*100,"%.\n")
+cm_test
+cat("\nThe precision for the test set in tree classification tree is ",(cm_test[4])/(cm_test[3]+cm_test[4])*100,"%.\n")
+cat("\nThe precision for the test set in bagging approach is ",(ct3_te[4])/(ct3_te[3]+ct3_te[4])*100,"%.\n")
+ct4_te
+cat("\nThe precision for the test set in random forest is ",(ct4_te[4])/(ct4_te[3]+ct4_te[4])*100,"%.\n")
+ct5_te
+cat("\nThe precision for the test set in boosting is ",(ct5_te[4])/(ct5_te[3]+ct5_te[4])*100,"%.\n")
+```
+
+
+***
+Part b:
+```{r}
+rf.train=randomForest(Purchase~.-Purchase,data=Caravan.train,mtry=2,ntree=100)
+importance(rf.train)
+varImpPlot(rf.train)
+cat("As we can see in the graph, the variables PBRAND, PPERSAYT, MOSTYPE, and APERSAUT are the most important in the random forest model.")
+summary(boost.caravan)
+```
+As we can see in the graph, the variables PPERSAUT, PPLEZIER, PBRAND and MOSTYPE are the most important in the boosting model.
+The features are not the same. Three of them are the same which are PPERSAYR, PBRAND and MOPLLAAG. They are not the same features. The reason might be that the two models are based on different approaches, thus the resulted important predictors are also different.
+
+***
+Part c:
+
+I think it's not a good model because from the code above the accuracy is about 94.02267% when I choose all No for the dataset. This means we can at least get such accuracy of 94% even when we directly guess the result as all No in the dataset. Therefore, The model with the accuracy of 94% is not good.
+```{r}
+sum(Caravan[,86]==0)/5822
+```
+
+***
+Part d - BONUS:
+
+We can use under sample majority class to improve the model and relieve the problem from the imbalanced data. As we can see there are more "No" than "Yes" in the data, so we can change the 4000 size train model to a smaller one and remove some size of "No"'s observation in it to get a smaller but more balanced train set. In this way, we can solve the imbalanced data problem and improve the model.
+
+***
+Part e - BONUS:
+
+
+If I scale the features, scores will stay almost the same but the model will have a new classification tree.
+```{r}
+normalize <- function(x){
+return((x - min(x)) /(max(x)-min(x)))
+}
+Caravan_sc1=as.data.frame(apply(Caravan[,1:86],2, FUN=normalize))
+#Caravan_sc1=data.frame(Caravan_sc1,Caravan[,86])
+summary(Caravan_sc1)
+```
+
+***
+\newpage
+
+
+
+### Write comments, questions: ...
+
+
+***
+I hereby write and submit my solutions without violating the academic honesty and integrity. If not, I accept the consequences. 
+
+### List the fiends you worked with (name, last name): Xubin Lou, Rong Fan
+
+### Disclose the resources or persons if you get any help: ...
+
+### How long did the assignment solutions take?: ...
+
+
+***
+## References
+...
+
+

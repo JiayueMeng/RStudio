@@ -1,0 +1,435 @@
+---
+title: "Module 2 Assignment on Linear Regression - 2"
+author: "Jiayue Meng // Undergraduate"
+date: "Today's date"
+#output: pdf_document
+output:
+  pdf_document: default
+  df_print: paged
+  #html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=80))
+```
+
+
+***
+
+\newpage{}
+
+
+***
+## Module Assignment Questions
+
+In this assignment, you will use the `Auto` data set with $7$ variables (one response `mpg` and six numerical) and $n=392$ vehicles. For sake of simplicity, categorical variables were excluded. Before each randomization used, use `set.seed(99)` so the test results are comparable.
+
+## Q1) (*Forward and Backward Selection*) 
+
+In `Module 1 Assignment`, `Q2`, you fitted `Model 3` with `mpg` as the response and the six numerical variables as predictors. This question involves the use of `forward` and `backward` selection methods on the same data set.
+
+a. Using `OLS`, fit the model with all predictors on `mpg`. Report the predictors'  coefficient estimates, $R_{adj}$, and $MSE$. Note: The method in `lm()` is called ordinary least squares (OLS).
+
+```{r eval=FALSE, echo=TRUE, results='hide'}
+#This is setup to start
+library(ISLR)
+Model_3 = mpg ~ horsepower+year+cylinders+displacement+weight+acceleration
+Model_3.fit = lm(Model_3, data=Auto)
+summary(Model_3.fit)
+# Or, prefer this restructuring way
+# by excluding categorical variables:
+# Make sure AutoNum is a data.frame
+AutoNum = Auto[, !(colnames(Auto) %in% c("origin", "name"))]
+Model_Full = mpg ~ . #you can write models in this way to call later
+Model_Full.fit = lm(Model_Full, data=AutoNum)
+summary(Model_Full.fit)
+```
+
+
+b. Using `forward selection method` from `regsubsets()` and `method="forward"`, fit MLR models and select the `best` subset of predictors. Report the best model obtained from the default setting by including the predictors' coefficient estimates, $R_{adj}$, and $MSE$.
+
+```{r echo=TRUE, eval=FALSE}
+# helpful code from the r lab: review it
+Model_Full = mpg ~ .
+regfit.m1=regsubsets(Model_Full, data=AutoNum, nbest=1, 
+                     nvmax=6, method="forward")
+reg.summary=summary(regfit.m1)
+reg.summary
+names(reg.summary)
+reg.summary$adjr2
+coef(regfit.m2, 1:6) #coefficients of all models built
+```
+
+c. What criterion had been employed to find the best subset? What other criteria exist? Explain.
+
+d. Using `backward selection method` from `regsubsets()` and `method="backward"`, fit MLR models and select the `best` subset of predictors. Report the best model obtained from the default setting by including predictors, their coefficient estimates, $R_{adj}$, and $MSE$.
+
+e. Compare the results obtained from `OLS`, `forward` and `backward` selection methods (parts a, b and d): What changed? Which one(s) is better? Comment and justify.
+
+
+## Q2) (*Cross-Validated with k-Fold*) 
+
+What changes in model selection results and the coefficient estimates when cross-validated set approach is employed? Specifically, we will use $k$-fold cross-validation (`k-fold CV`) here.
+
+a. Using the $5$-fold CV approach, fit the OLS MLR model on `mpg` including all the predictors (don't use any subset selection). Report all the predictors' coefficient estimates in the OLS model (using all folds), the averaged $MSE_{train}$, and the averaged $MSE_{test}$. 
+
+b. Using the $5$-fold CV approach and `forward selection method`, fit MLR models on `mpg` and select the `best` subset of predictors. Report the best model obtained from the default setting by including the predictors' coefficient estimates (this depends on what predictors you keep in the model), the averaged $MSE_{train}$, and the averaged $MSE_{test}$.
+
+c. Compare the $MSE_{test}$'s. Explain.
+
+d. Using the $5$-fold CV approach and `backward selection method`, fit MLR models on `mpg` and select the `best` subset of predictors. Report the best model obtained from the default setting by including the predictors' coefficient estimates, the averaged $MSE_{train}$, $MSE_{test}$.
+
+e. Did you come up with a different model on parts b and d? Are the predictors and their coefficient estimates same? Compare and explain.
+
+f. Which fitted model is better among parts a, b, and d? Why? Justify. 
+
+
+## Q3) (*Shrinkage Methods*) 
+
+Results for `OLS`, `lasso`, and `ridge` regression methods can be comparable. Now, you are expected to observe that ridge and lasso regression methods may reduce some coefficients to zero (so in this way, these features are eliminated) and shrink coefficients of other variables to low values. 
+
+In this exercise, you will analyze theses estimation and prediction methods (OLS, ridge, lasso) on the `mpg` in the Auto data set using $k-fold$ cross-validation test approach.
+
+a. Fit a ridge regression model on the entire data set (including all six predictors, don't use yet any validation approach), with the optimal $\lambda$ chosen by `cv.glmnet()`. Report $\hat \lambda$, the predictors' coefficient estimates, and $MSE$.
+
+b. Fit a lasso regression model on the entire data set (including all six predictors, don't use yet any validation approach), with the optimal $\lambda$ chosen by `cv.glmnet()`. Report $\hat \lambda$, the predictors' coefficient estimates, and $MSE$.
+
+c. Compare the parts a and b in Q3 to part a in Q1. What changed? Comment.
+
+d. How accurately can we predict `mpg`? Using the three methods (OLS, ridge and lasso) with all predictors, you will fit and test using $5$-fold cross-validation approach with the optimal $\lambda$ chosen by `cv.glmnet()`. For each, report the averaged train and test errors ($MSE_{train}$, $MSE_{test}$):
+
+   1) Fit an `OLS` model.
+   2) Fit a `ridge` regression model.
+   3) Fit a `lasso` regression model.
+
+e. Write an overall report on part d by addressing the inquiry, `how accurately can we predict mpg?`. Is there much difference among the test errors resulting from these three approaches? Show your comprehension. 
+
+f. (BONUS) Propose a different model (or set of models) that seem to perform well on this data set, and justify your answer.
+
+g. (BONUS) Include categorical variables to the models you built in part d, Q3. Report.
+
+h. (GOLDEN BONUS) Propose a model (or set of models) that seem to perform well on this data set, and justify your answer. Make sure that you are evaluating model performance using $5$-fold cross-validation approach. You can transform the data, scale and try any methods. When $MSE_{test}$ is the lowest (under the setting of Q3, part d) in the class, your HW assignment score will be 100% (20 pts).  
+
+i. (BONUS) You can make a hybrid design in model selection using all the methods here in a way that yields better results. Show your work, justify and obtain better results in part d, Q3.
+
+
+\newpage
+
+***
+
+
+## Your Solutions
+
+## Q1) 
+
+Part a:
+
+
+The adjusted R-squared is 0.8063, and the MSE is 11.8009.
+
+```{r}
+library(ISLR)
+library(leaps)
+attach(Auto)
+
+Model_3 = mpg ~ horsepower+year+cylinders+displacement+weight+acceleration
+Model_3.fit = lm(Model_3, data=Auto)
+summary(Model_3.fit)
+
+matrix1<-matrix(c(summary(Model_3.fit)$coefficients[1,1],summary(Model_3.fit)$coefficients[2,1],summary(Model_3.fit)$coefficients[3,1],summary(Model_3.fit)$coefficients[4,1],summary(Model_3.fit)$coefficients[5,1],summary(Model_3.fit)$coefficients[6,1],summary(Model_3.fit)$coefficients[7,1]),7,1)
+
+rownames(matrix1)=c("(Intercept)","Horsepower","Year","Cylinders","Displacement","Weight","Acceleration")
+colnames(matrix1)=c("Estimates")
+
+knitr::kable(matrix1, caption = "Summary Statistics")
+
+(sum((resid(Model_3.fit))^2))/385 #MSE
+```
+
+
+***
+Part b:
+
+```{r}
+AutoNum = Auto[, !(colnames(Auto) %in% c("origin", "name"))]
+Model_Full = mpg ~ .
+regfit.m1=regsubsets(Model_Full, data=AutoNum,nbest=1, nvmax=6, method="forward")
+reg.summary=summary(regfit.m1)
+reg.summary
+coef(regfit.m1, 1:6) 
+
+matrix2<-matrix(c(reg.summary$adjr2))
+col2<-c(reg.summary$rss[1]/390,reg.summary$rss[2]/389,reg.summary$rss[3]/388,reg.summary$rss[4]/387,reg.summary$rss[5]/386,reg.summary$rss[6]/385)
+datam<-cbind(matrix2,col2)
+
+rownames(datam)=c("Model 1","Model 2","Model 3","Model 4","Model 5","Model 6")
+colnames(datam)=c("Adjusted R-squared","MSE")
+
+knitr::kable(datam, caption = "Summary Statistics")
+```
+
+
+The best model obtained from the default setting is the one with the predictors year and weight, who has the largest $R_{adj}$ and smallest MSE.
+
+***
+Part c:
+
+
+The criterion that had been employed to fin the best subset are MSE and $R_{adj}$. The subset who has the smallest MSE and the largest $R_{adj}$ is the best. Other criteria are AIC, BIC, $MSE_{test}$, $C_p$, and SSE.
+
+***
+Part d:
+
+
+```{r}
+Model_Full = mpg ~ .
+regfit.m2=regsubsets(Model_Full, data=AutoNum,nbest=1, nvmax=6, method="backward")
+reg.summary=summary(regfit.m2)
+reg.summary
+coef(regfit.m2, 1:6) 
+
+matrix2<-matrix(c(reg.summary$adjr2))
+col2<-c(reg.summary$rss[1]/390,reg.summary$rss[2]/389,reg.summary$rss[3]/388,reg.summary$rss[4]/387,reg.summary$rss[5]/386,reg.summary$rss[6]/385)
+datam<-cbind(matrix2,col2)
+
+rownames(datam)=c("Model 1","Model 2","Model 3","Model 4","Model 5","Model 6")
+colnames(datam)=c("Adjusted R-squared","MSE")
+
+knitr::kable(datam, caption = "Summary Statistics")
+```
+
+
+The best model obtained from the default setting is the one with the predictors year and weight, who has the largest $R_{adj}$ and smallest MSE.
+
+***
+Part e:
+
+
+We obtained the same result from forward and backward selection methods that the model with the predictors year and weight is the best. The models obtained from forward and backward selection methods (parts b and d) are better. Small MSE indicates narrow errors and large $R_{adj}$ indicates that more variance in the data points can be explained by the model. 
+
+***
+
+
+
+\newpage
+
+## Q2) 
+
+Part a:
+
+
+The average $MSE_{test}$ is 11.52738. The average $MSE_{train}$ is 12.02604.
+```{r}
+library(ISLR)
+AutoNum = Auto[, !(colnames(Auto) %in% c("origin", "name"))]
+Model_Full = mpg ~ . #you can write models in this way to call later
+Model_Full.fit = lm(Model_Full, data=AutoNum)
+k=5 #you will need k=5 in the assignment
+set.seed(99)
+folds=sample(1:k,nrow(AutoNum),replace=TRUE)
+folds
+mse.storage=matrix(NA,k,2) #for k-fold, with no model selection
+mse.storage
+for(j in 1:k){
+  # use (k-1)-fold data with all predictors
+  fit=lm(mpg~.,data=AutoNum[folds!=j,])
+  mse_train = mean(residuals(fit)^2)
+  pred=predict(fit,AutoNum[folds==j,])
+  mse_test = mean( (AutoNum$mpg[folds==j]-pred)^2)
+  mse.storage[j,] = cbind(mse_train, mse_test)
+}
+mse.storage
+apply(mse.storage, 2, mean) # averaged mse's: train and test
+
+coefficients(lm(mpg~., data=AutoNum))
+```
+
+***
+Part b:
+
+```{r}
+predict.regsubsets=function(object, newdata, id, ...){
+  form=as.formula(object$call[[2]])
+  mat=model.matrix(form,newdata)
+  coefi=coef(object,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi #prediction or fitted results
+}
+cv.errors=matrix(NA,k,6, dimnames=list(NULL, paste(1:6)))
+folds=sample(1:k,nrow(AutoNum),replace=TRUE)
+best.fit=regsubsets(mpg~.,data=AutoNum[folds!=1,],
+                    nvmax=6, method = "forward")
+coef(best.fit, 1:6)
+for(j in 1:k){
+  best.fit=regsubsets(mpg~.,data=AutoNum[folds!=j,],
+                    nvmax=6, method = "forward")
+  for(i in 1:6){
+    # predict the held data for test MSE
+    pred=predict(best.fit,AutoNum[folds==j,],id=i)
+    cv.errors[j,i]=mean( (AutoNum$mpg[folds==j]-pred)^2)
+  }
+}
+mean.cv.errors=apply(cv.errors,2,mean)
+cat('The test MSE is',mean.cv.errors) 
+for(j in 1:k){
+  best.fit=regsubsets(mpg~.,data=AutoNum[folds!=j,],
+                    nvmax=6, method = "forward")
+  for(i in 1:6){
+    # predict the held data for test MSE
+    pred=predict(best.fit,AutoNum[folds==j,],id=i)
+    cv.errors[j,i]=mean(residuals(best.fit)^2)
+  }
+}
+mean.cv.errors=apply(cv.errors,2,mean)
+mean.cv.errors #test MSE
+```
+
+
+***
+Part c:
+
+
+For part a, $MSE_{test}$ is bigger than that of the part b. It has more predictors. However, as more predictors are added, more error terms are added as well.
+
+***
+Part d:
+
+```{r}
+predict.regsubsets=function(object, newdata, id, ...){
+  form=as.formula(object$call[[2]])
+  mat=model.matrix(form,newdata)
+  coefi=coef(object,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi 
+}
+best.fit=regsubsets(mpg~.,data=AutoNum[folds!=1,],
+                    nvmax=6, method = "backward",really.big=T)
+coef(best.fit, 1:6)
+for(j in 1:k){
+  best.fit=regsubsets(mpg~.,data=AutoNum[folds!=j,],
+                    nvmax=6, method = "backward",really.big=T)
+  for(i in 1:6){
+    pred=predict(best.fit,AutoNum[folds==j,],id=i)
+    cv.errors[j,i]=mean( (AutoNum$mpg[folds==j]-pred)^2)
+  }
+}
+mean.cv.errors=apply(cv.errors,2,mean)
+mean.cv.errors 
+cat('The test MSE is',mean.cv.errors) 
+for(j in 1:k){
+  best.fit=regsubsets(mpg~.,data=AutoNum[folds!=j,],
+                    nvmax=6, method = "backward",really.big=T)
+  for(i in 1:6){
+    pred=predict(best.fit,AutoNum[folds==j,],id=i)
+    cv.errors[j,i]=mean(residuals(best.fit)^2)
+  }
+}
+mean.cv.errors=apply(cv.errors,2,mean)
+mean.cv.errors 
+cat('The train MSE is',mean.cv.errors)
+```
+
+***
+Part e:
+
+No, I didn't come up with a different model on part b and d. Part b and d have the same result because they have the same predictors and coefficient estimates. 
+
+***
+Part f:
+
+Since the fitted model with small$MSE_{test}$ is better, the fitted model in part b and d is better.
+
+***
+
+
+\newpage
+
+
+## Q3) 
+
+Part a:
+
+
+The $\hat{\lambda}$ is 0.6729201. The MSE is 12.83154.
+```{r}
+library(glmnet)
+x=model.matrix(mpg~.,AutoNum)[,-1]
+dim(x)
+y=Auto$mpg
+
+set.seed(99)
+train=sample(1:nrow(x), nrow(x)/2)
+test=(-train)
+y.test=y[test]
+
+cv.out=cv.glmnet(x[train,],y[train],alpha=0)
+bestlam1=cv.out$lambda.min
+bestlam1
+
+out1=glmnet(x,y,alpha=0)
+predict(out1,type="coefficients",s=bestlam1)[1:7,]
+
+ridge.pred=predict(out1,s=bestlam1,newx=x[test,])
+mean((ridge.pred-y.test)^2)
+```
+
+***
+Part b:
+
+
+The $\hat{\lambda}$ is 0.2152851. The MSE is 12.18631.
+```{r}
+set.seed(99)
+train=sample(1:nrow(x), nrow(x)/2)
+test=(-train)
+y.test=y[test]
+
+cv.out=cv.glmnet(x[train,],y[train],alpha=1)
+bestlam2=cv.out$lambda.min
+bestlam2
+
+out2=glmnet(x,y,alpha=1)
+lasso.coef=predict(out2,type="coefficients",s=bestlam2)[1:7,]
+lasso.coef
+lasso.pred=predict(out2,s=bestlam2,newx=x[test,])
+mean((lasso.pred-y.test)^2)
+
+```
+
+***
+Part c:
+
+
+After lasso regression, the coefficient estimates changed. Not only MSE increased, estimators of acceleration and displacement also changed to zero.
+
+***
+Part d:
+
+
+
+***
+Part e:
+
+
+
+***
+
+
+\newpage
+
+## Write comments, questions: Too much homework. Too hard. Lab code is not enough for finishing the homework. A lot of my friends feel the same. I hope we can have more clear and organized lab code that can actually help when we are doing the homework. I also hope we can have examples that are similar to the homework questions. 
+
+
+***
+I hereby write and submit my solutions without violating the academic honesty and integrity. If not, I accept the consequences. 
+
+### List the fiends you worked with (name, last name): Xubin Lou, Rong Fan
+
+### Disclose the resources or persons if you get any help: 
+
+### How long did the assignment work take?: 4 days. Too much...
+
+
+***
+## References
+...

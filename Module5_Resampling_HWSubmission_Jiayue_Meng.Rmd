@@ -1,0 +1,210 @@
+---
+title: "Module 5 Assignment on Resampling"
+author: "Jiayue Meng // Undergraduate"
+date: "Today's date"
+#output: pdf_document
+output:
+  pdf_document: default
+  df_print: paged
+  #html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=80))
+```
+
+***
+
+***
+
+\newpage{}
+
+
+***
+## Module Assignment Questions
+## Q1) (*Random Variable Generation*) 
+
+You have learned how to generate exponential random variables using uniform distribution. Now, you will generate normal random variables using one of the methods described in this [LINK](http://interstat.statjournals.net/YEAR/2012/articles/1205003.pdf).
+
+a. As we studied the exponential random variable in the lab session, generate a 1000 standard normal distribution using the method you chose in the link.
+
+b. Check if this generation is verified with the theory: 1) check if the characteristics (so calculate mean, sd, skewness, kurtosis for each) of empirical and theoretical distributions are similar; 2) plot a QQ and judge by eye; and 3) make a chi-squared test on empirical and theoretical buckets.
+
+c. Write an overall comment on your experience.
+
+
+***
+## Q2) (*Bootstrapping*) 
+
+Let $\hat{\sigma}^2_1$  and $\hat{\sigma}^2_2$ represent the variance estimates of two independent random samples of size 10 and 20, respectively, taken from any normal distributions with variances $\sigma^2_1=12$ and $\sigma^2_2=8$ , respectively. Let a new parameter be defined as $v= \frac{\sigma^2_1}{\sigma^2_2}$. 
+
+Based on randomly generated samples with any choice on means, use bootstrap method (B=1000) to answer each part below: 
+
+a. Estimate $\sigma^2_1$ along with the standard error on the estimate. Evaluate if this misses the true value.
+
+b. Estimate the parameter $v$ along with the standard error on the estimate. Evaluate if this misses the true value.
+
+c. Obtain the percentile-based 95% confidence interval on the $v$ estimate. 
+
+d. (BONUS) Search for what theory says about the CI on the $\sigma^2$ and $v$ estimates. Verify if the result in part c convinces the theory.
+
+e. (BONUS) Can bootstrapping method solve the probability problem, $P(\frac{\hat{\sigma}^2_1}{\hat{\sigma}^2_2}>2)$? Calculate and show. Does it give similar result from the theory?
+
+	
+***
+## Q3) (*Advanced Sampling*) 
+
+Watch [`the playlist`](https://youtube.com/playlist?list=PLTpORyMWYJsa-bLjJqzsJKXQCrMAiYu7n) on Hidden Markov, MC, MCMC, Gibbs, Metropolis-Hastings methods (or, use this link <https://youtube.com/playlist?list=PLTpORyMWYJsa-bLjJqzsJKXQCrMAiYu7n>)
+
+Write one paragraph summary for each MCMC, Gibbs and Metropolis-Hastings method by highlighting how the strategy works (watch six videos, write three paragraphs).
+
+- (BONUS) Give an example from `Deep Learning` if any of them is employed.
+
+
+\newpage
+
+***
+
+
+## Your Solutions
+
+Q1) 
+
+Part a.
+```{r}
+#Method-8: Inversion Method 
+set.seed(99)
+U=runif(n=1000, min=0, max=1)
+Z=(-log(1/U-1))/1.702
+normal<-rnorm(1000)
+
+hist1=hist(Z, freq=TRUE, breaks=seq(-4,8,by=.5))$counts + 1 #+1 to adjust zero issue
+hist1
+hist2=hist(normal, freq=TRUE, breaks=seq(-4,8,by=.5))$counts + 1 #adjust
+hist2
+```
+***
+
+Part b.
+```{r}
+#(1)
+mean(Z)
+sd(Z)
+library(e1071)   
+skewness(Z)
+kurtosis(Z)
+cat("For the empirical distribution: The mean of is very close to 0. The standars deviation is close to 1. The skewness is close to 0. The kurtosis is very close to 3. Therefore, we can conclude that the characteristics of empirical and theoretical distributions are similar.")
+
+#(2)
+qqplot(Z,normal)
+abline(0,1)
+cat("From the QQ plot we can see that these points follow the line very well. The pattern is approximately linear.")
+
+chisq.test(hist(normal, breaks  = seq(-4,8,l=13))$count, hist(Z, breaks = seq(-4,8,l=13))$count)
+cat("The p-value is 0.03094, which is smaller than 0.05. Thus, we can say that the empirical distribution is associated with the theoretical distribution.")
+```
+***
+
+Part c.
+
+
+Overall, we can see from the QQ plot and similar characteristics in part b that this method is a good method for generating random normal distributions because its distribution is similar to the random normal distribution.   
+
+
+***
+
+
+***
+\newpage
+
+Q2) 
+
+Part a.
+
+
+The estimated $\sigma^2_1$ is 4.414891 and the standard error is 1.618782. The estimation does not miss the true value because it is within the 1 standard error away from 4.414891. 
+```{r}
+library(boot)
+set.seed(99)
+B=1000
+# function to obtain var from the data
+var <- function(data, indices) {
+  return((sd(data[indices]))^2)
+}
+var_a <- boot(data=rnorm(10,sd=sqrt(12)), statistic=var, R=1000)
+var_a
+```
+
+
+***
+
+Part b.
+
+
+The estimated v=$\sigma^2_1$/$\sigma^2_2$ is 0.3719151 and the standard error is 0.4221674. The estimation missed the true value for the population, but it does not miss the true value for the sample we generated.
+```{r}
+set.seed(99)
+x1 = rnorm(10, sd = sqrt(12))
+x2 = rnorm(20, sd = sqrt(8))
+df = cbind(x1,x2)
+dim(df)
+
+var.est.fn <- function(data, indices, n1=10, n2=20) {
+
+  sample1 = df[sample(size=n1, x=indices, replace = TRUE),1]
+  sample2 = df[sample(size=n2, x=indices, replace = TRUE),2]
+  ratio=var(sample1)/var(sample2)
+  return(ratio)
+}
+B=1000
+results = boot(data=df, statistic = var.est.fn, R = B)
+results
+```
+
+***
+
+Part c.
+
+
+The 95% confidence interval is (0.0560, 1.5161). We are 95% confidence that the true value of v estimate falls in the interval (0.0560, 1.5161). 
+```{r}
+boot.ci(results, type="bca")
+```
+
+
+***
+\newpage
+
+
+Q3) 
+
+
+MCMC is about designing a Markov chain. MCMC means the combination of Markov chain and Monte Carlo. MCMC learns from the previous samples it has collected and picks the next sample based on that. By looking at the previous sample, MCMC uses that to make a decision about where the next sample should be. So, the samples are no longer independent, instead, the next sample depends on the last sample. And this is what the first "MC" Markov chain indicates. MCMC simulates draws from our target distribution p(x). And this is what the second "MC" Monte Carlo indicates. We set the stationary distribution as p(x). Then, we burn in the first many samples in order to get to the target distribution eventually. After the "burn in", we can keep all the future samples because they are all assumed to be draw from the target distribution p(x). One of the biggest advantages of MCMC is that it is potentially more efficient than Accept-Reject Sampling. One of the disadvantages of MCMC is that then samples are correlated with each other.
+
+
+Metropolis-Hastings algorithm is one of the most popular MCMC methods. For Metropolis-Hastings, we propose some kind of candidates as we do in the Accept-Reject Sampling, but the difference is that samples are not independent in Metropolis-Hastings method. The Metropolis algorithm is if your candidate distribution is symmetric, and Metropolis-Hastings is a more general case including the situation that the candidate distribution is asymmetric. The first step is to take some easier distribution to sample from and propose a candidate for the next state of the Markov chain. We get the next candidate depending on the center of the last candidate. We find the new center $x_{t+1}$ with some fixed variances $\sigma^2$ staring from the previous center $x_t$. The second step is to choose to accept the sample we proposed in step 1 with the probability function A($x_t$ -> $x_{t+1}$). We will use $x_{t+1}$ as the next sample distribution if the result we get at last satisfies the Detailed Balance Condition, or we keep using the original sample distribution and keep searching otherwise.
+
+
+Gibbs is another MCMC method. Gibbs Sampling is useful when we have two or more dimensions for the distributions we are trying to sample from. The secondary case to use Gibbs Sampling is that when it is difficult to sample from the joint distribution like p(x,y) while sampling from a conditional distribution like p(x|y) and p(y|x) is easy, we can choose to sample from a conditional distribution to replace sampling from the joint distribution. We do the similar change in MCMC by swapping variables. 
+
+
+##(Bonus)
+
+
+Deep learning has delivered super-human accuracy for image classification, object detection, image restoration and image segmentation—even handwritten digits can be recognized. Deep learning using enormous neural networks is teaching machines to automate the tasks performed by human visual systems.Practical examples are virtual assistants, shopping & entertainment, facial recognition, translations, pharmaceuticals, and vision for driverless vehicles.
+
+
+The MCMC, Metropolis algorithm, and Gibbs sampling are commonly used in machine learning and deep learning. For example, Google DeepMind’s AlphaGo uses MCMC in its algorithm and beats the GO champions years ago. The reason that it could do this is that the AlphaGo changed its strategy based on the the previous steps that the GO champions made to increase the odds of winning. A deep network is used and the gamblers create a running sum to represent the information they need to beat the house in AlphaGo. Sampling efficiency, which is one of the biggest advantages of MCMC, enables AlphaGo to moves smartly and adaptively.
+
+***
+\newpage
+
+### Write comments, questions: ...
+
+
+***
+### Disclose the resources or persons if you get any help: Xubin Lou, Rong Fan
+
+### How long did the assignment solutions take?: ...
+
+## References: ...
